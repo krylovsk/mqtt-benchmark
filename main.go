@@ -1,0 +1,171 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/GaryBoone/GoStats/stats"
+)
+
+type Message struct {
+	Topic     string
+	QoS       byte
+	Payload   interface{}
+	Sent      time.Time
+	Delivered time.Time
+	Error     bool
+}
+
+type RunResults struct {
+	ID          int     `json:"id"`
+	Successes   int64   `json:"successes"`
+	Failures    int64   `json:"failures"`
+	RunTime     float64 `json:"run_time"`
+	MsgTimeMin  float64 `json:"msg_tim_min"`
+	MsgTimeMax  float64 `json:"msg_time_max"`
+	MsgTimeMean float64 `json:"msg_time_mean"`
+	MsgTimeStd  float64 `json:"msg_time_std"`
+	MsgsPerSec  float64 `json:"msgs_per_sec"`
+}
+
+type TotalResults struct {
+	Successes       int64   `json:"successes"`
+	Failures        int64   `json:"failures"`
+	TotalRunTime    float64 `json:"total_run_time"`
+	AvgRunTime      float64 `json:"avg_run_time"`
+	MsgTimeMin      float64 `json:"msg_time_min"`
+	MsgTimeMax      float64 `json:"msg_time_max"`
+	MsgTimeMeanAvg  float64 `json:"msg_time_mean_avg"`
+	MsgTimeMeanStd  float64 `json:"msg_time_mean_std"`
+	TotalMsgsPerSec float64 `json:"total_msgs_per_sec"`
+	AvgMsgsPerSec   float64 `json:"avg_msgs_per_sec"`
+}
+
+type JSONResults struct {
+	Runs   []*RunResults `json:"runs"`
+	Totals *TotalResults `json:"totals"`
+}
+
+func main() {
+
+	var (
+		broker   = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
+		topic    = flag.String("topic", "/test", "MQTT topic for incoming message")
+		username = flag.String("username", "", "MQTT username (empty if auth disabled)")
+		password = flag.String("password", "", "MQTT password (empty if auth disabled)")
+		qos      = flag.Int("qos", 1, "QoS for published messages")
+		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
+		count    = flag.Int("count", 100, "Number of messages to send per client")
+		clients  = flag.Int("clients", 10, "Number of clients to start")
+		format   = flag.String("format", "text", "Output format: text|json")
+	)
+
+	flag.Parse()
+	if *clients < 0 {
+		log.Fatal("Invlalid arguments")
+	}
+
+	resCh := make(chan *RunResults)
+	start := time.Now()
+	for i := 0; i < *clients; i++ {
+		log.Println("Starting client ", i)
+		c := &Client{
+			ID:         i,
+			BrokerURL:  *broker,
+			BrokerUser: *username,
+			BrokerPass: *password,
+			MsgTopic:   *topic,
+			MsgSize:    *size,
+			MsgCount:   *count,
+			MsgQoS:     byte(*qos),
+		}
+		go c.Run(resCh)
+	}
+
+	// collect the results
+	results := make([]*RunResults, *clients)
+	for i := 0; i < *clients; i++ {
+		results[i] = <-resCh
+	}
+	totalTime := time.Now().Sub(start)
+	totals := calculateTotalResults(results, totalTime)
+
+	// print stats
+	printResults(results, totals, *format)
+}
+func calculateTotalResults(results []*RunResults, totalTime time.Duration) *TotalResults {
+	totals := new(TotalResults)
+	totals.TotalRunTime = totalTime.Seconds()
+
+	msgTimeMeans := make([]float64, len(results))
+	msgsPerSecs := make([]float64, len(results))
+	runTimes := make([]float64, len(results))
+	bws := make([]float64, len(results))
+
+	totals.MsgTimeMin = results[0].MsgTimeMin
+	for i, res := range results {
+		totals.Successes += res.Successes
+		totals.Failures += res.Failures
+		totals.TotalMsgsPerSec += res.MsgsPerSec
+
+		if res.MsgTimeMin < totals.MsgTimeMin {
+			totals.MsgTimeMin = res.MsgTimeMin
+		}
+
+		if res.MsgTimeMax > totals.MsgTimeMax {
+			totals.MsgTimeMax = res.MsgTimeMax
+		}
+
+		msgTimeMeans[i] = res.MsgTimeMean
+		msgsPerSecs[i] = res.MsgsPerSec
+		runTimes[i] = res.RunTime
+		bws[i] = res.MsgsPerSec
+	}
+	totals.AvgMsgsPerSec = stats.StatsMean(msgsPerSecs)
+	totals.AvgRunTime = stats.StatsMean(runTimes)
+	totals.MsgTimeMeanAvg = stats.StatsMean(msgTimeMeans)
+	totals.MsgTimeMeanStd = stats.StatsSampleStandardDeviation(msgTimeMeans)
+
+	return totals
+}
+
+func printResults(results []*RunResults, totals *TotalResults, format string) {
+	switch format {
+	case "json":
+		jr := JSONResults{
+			Runs:   results,
+			Totals: totals,
+		}
+		data, _ := json.Marshal(jr)
+		var out bytes.Buffer
+		json.Indent(&out, data, "", "\t")
+
+		fmt.Println(string(out.Bytes()))
+	default:
+		for _, res := range results {
+			fmt.Printf("======= CLIENT %d =======\n", res.ID)
+			fmt.Printf("Ratio:               %d (%d/%d)\n", res.Successes/(res.Successes+res.Failures), res.Successes, res.Successes+res.Failures)
+			fmt.Printf("Runtime (s):         %.3f\n", res.RunTime)
+			fmt.Printf("Msg time min (ms):   %.3f\n", res.MsgTimeMin)
+			fmt.Printf("Msg time max (ms):   %.3f\n", res.MsgTimeMax)
+			fmt.Printf("Msg time mean (ms):  %.3f\n", res.MsgTimeMean)
+			fmt.Printf("Msg time std (ms):   %.3f\n", res.MsgTimeStd)
+			fmt.Printf("Bandwidth (msg/sec): %.3f\n\n", res.MsgsPerSec)
+		}
+		fmt.Printf("========= TOTAL (%d) =========\n", len(results))
+		fmt.Printf("Total Ratio:                 %d (%d/%d)\n", totals.Successes/(totals.Successes+totals.Failures), totals.Successes, totals.Successes+totals.Failures)
+		fmt.Printf("Total Runime (sec):          %.3f\n", totals.TotalRunTime)
+		fmt.Printf("Average Runtime (sec):       %.3f\n", totals.AvgRunTime)
+		fmt.Printf("Msg time min (ms):           %.3f\n", totals.MsgTimeMin)
+		fmt.Printf("Msg time max (ms):           %.3f\n", totals.MsgTimeMax)
+		fmt.Printf("Msg time mean mean (ms):     %.3f\n", totals.MsgTimeMeanAvg)
+		fmt.Printf("Msg time mean std (ms):      %.3f\n", totals.MsgTimeMeanStd)
+		fmt.Printf("Average Bandwidth (msg/sec): %.3f\n", totals.AvgMsgsPerSec)
+		fmt.Printf("Total Bandwidth (msg/sec):   %.3f\n", totals.TotalMsgsPerSec)
+	}
+	return
+}
