@@ -11,6 +11,7 @@ import (
 	"github.com/GaryBoone/GoStats/stats"
 )
 
+// Message describes a message
 type Message struct {
 	Topic     string
 	QoS       byte
@@ -20,19 +21,22 @@ type Message struct {
 	Error     bool
 }
 
+// RunResults describes results of a single client / run
 type RunResults struct {
 	ID          int     `json:"id"`
 	Successes   int64   `json:"successes"`
 	Failures    int64   `json:"failures"`
 	RunTime     float64 `json:"run_time"`
-	MsgTimeMin  float64 `json:"msg_tim_min"`
+	MsgTimeMin  float64 `json:"msg_time_min"`
 	MsgTimeMax  float64 `json:"msg_time_max"`
 	MsgTimeMean float64 `json:"msg_time_mean"`
 	MsgTimeStd  float64 `json:"msg_time_std"`
 	MsgsPerSec  float64 `json:"msgs_per_sec"`
 }
 
+// TotalResults describes results of all clients / runs
 type TotalResults struct {
+	Ratio           float64 `json:"ratio"`
 	Successes       int64   `json:"successes"`
 	Failures        int64   `json:"failures"`
 	TotalRunTime    float64 `json:"total_run_time"`
@@ -45,6 +49,7 @@ type TotalResults struct {
 	AvgMsgsPerSec   float64 `json:"avg_msgs_per_sec"`
 }
 
+// JSONResults are used to export results as a JSON document
 type JSONResults struct {
 	Runs   []*RunResults `json:"runs"`
 	Totals *TotalResults `json:"totals"`
@@ -54,7 +59,7 @@ func main() {
 
 	var (
 		broker   = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
-		topic    = flag.String("topic", "/test", "MQTT topic for incoming message")
+		topic    = flag.String("topic", "/test", "MQTT topic for outgoing messages")
 		username = flag.String("username", "", "MQTT username (empty if auth disabled)")
 		password = flag.String("password", "", "MQTT password (empty if auth disabled)")
 		qos      = flag.Int("qos", 1, "QoS for published messages")
@@ -65,7 +70,7 @@ func main() {
 	)
 
 	flag.Parse()
-	if *clients < 0 {
+	if *clients < 1 {
 		log.Fatal("Invlalid arguments")
 	}
 
@@ -125,6 +130,7 @@ func calculateTotalResults(results []*RunResults, totalTime time.Duration) *Tota
 		runTimes[i] = res.RunTime
 		bws[i] = res.MsgsPerSec
 	}
+	totals.Ratio = float64(totals.Successes) / float64(totals.Successes+totals.Failures)
 	totals.AvgMsgsPerSec = stats.StatsMean(msgsPerSecs)
 	totals.AvgRunTime = stats.StatsMean(runTimes)
 	totals.MsgTimeMeanAvg = stats.StatsMean(msgTimeMeans)
@@ -148,7 +154,7 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 	default:
 		for _, res := range results {
 			fmt.Printf("======= CLIENT %d =======\n", res.ID)
-			fmt.Printf("Ratio:               %d (%d/%d)\n", res.Successes/(res.Successes+res.Failures), res.Successes, res.Successes+res.Failures)
+			fmt.Printf("Ratio:               %.3f (%d/%d)\n", float64(res.Successes)/float64(res.Successes+res.Failures), res.Successes, res.Successes+res.Failures)
 			fmt.Printf("Runtime (s):         %.3f\n", res.RunTime)
 			fmt.Printf("Msg time min (ms):   %.3f\n", res.MsgTimeMin)
 			fmt.Printf("Msg time max (ms):   %.3f\n", res.MsgTimeMax)
@@ -157,8 +163,8 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 			fmt.Printf("Bandwidth (msg/sec): %.3f\n\n", res.MsgsPerSec)
 		}
 		fmt.Printf("========= TOTAL (%d) =========\n", len(results))
-		fmt.Printf("Total Ratio:                 %d (%d/%d)\n", totals.Successes/(totals.Successes+totals.Failures), totals.Successes, totals.Successes+totals.Failures)
-		fmt.Printf("Total Runime (sec):          %.3f\n", totals.TotalRunTime)
+		fmt.Printf("Total Ratio:                 %.3f (%d/%d)\n", totals.Ratio, totals.Successes, totals.Successes+totals.Failures)
+		fmt.Printf("Total Runtime (sec):         %.3f\n", totals.TotalRunTime)
 		fmt.Printf("Average Runtime (sec):       %.3f\n", totals.AvgRunTime)
 		fmt.Printf("Msg time min (ms):           %.3f\n", totals.MsgTimeMin)
 		fmt.Printf("Msg time max (ms):           %.3f\n", totals.MsgTimeMax)
