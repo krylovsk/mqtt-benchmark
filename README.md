@@ -2,7 +2,15 @@ MQTT benchmarking tool
 =========
 A simple MQTT (broker) benchmarking tool.
 
-Supports multiple concurrent clients, configurable message size, etc:
+Installation:
+
+```
+go get github.com/krylovsk/mqtt-benchmark
+```
+
+All dependencies are vendored with [manul](https://github.com/kovetskiy/manul).
+
+The tool supports multiple concurrent clients, configurable message size, etc:
 ```
 > mqtt-benchmark --help
 Usage of mqtt-benchmark:

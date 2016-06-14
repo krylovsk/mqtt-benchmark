@@ -7,8 +7,8 @@ import (
 )
 
 import (
-	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 	"github.com/GaryBoone/GoStats/stats"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 type Client struct {
@@ -79,7 +79,7 @@ func (c *Client) genMessages(ch chan *Message, done chan bool) {
 }
 
 func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) {
-	onConnected := func(client *mqtt.Client) {
+	onConnected := func(client mqtt.Client) {
 		log.Printf("CLIENT %v is connected to the broker %v\n", c.ID, c.BrokerURL)
 		ctr := 0
 		for {
@@ -115,7 +115,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		SetCleanSession(true).
 		SetAutoReconnect(true).
 		SetOnConnectHandler(onConnected).
-		SetConnectionLostHandler(func(client *mqtt.Client, reason error) {
+		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
 		log.Printf("CLIENT %v lost connection to the broker: %v. Will reconnect...\n", c.ID, reason.Error())
 	})
 	if c.BrokerUser != "" && c.BrokerPass != "" {
