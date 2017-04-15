@@ -20,6 +20,7 @@ type Client struct {
 	MsgSize    int
 	MsgCount   int
 	MsgQoS     byte
+	Quiet      bool
 }
 
 func (c *Client) Run(res chan *RunResults) {
@@ -80,7 +81,9 @@ func (c *Client) genMessages(ch chan *Message, done chan bool) {
 
 func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) {
 	onConnected := func(client mqtt.Client) {
-		log.Printf("CLIENT %v is connected to the broker %v\n", c.ID, c.BrokerURL)
+		if !c.Quiet {
+			log.Printf("CLIENT %v is connected to the broker %v\n", c.ID, c.BrokerURL)
+		}
 		ctr := 0
 		for {
 			select {
@@ -98,12 +101,16 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 				out <- m
 
 				if ctr > 0 && ctr%100 == 0 {
-					log.Printf("CLIENT %v published %v messages and keeps publishing...\n", c.ID, ctr)
+					if !c.Quiet {
+						log.Printf("CLIENT %v published %v messages and keeps publishing...\n", c.ID, ctr)
+					}
 				}
 				ctr++
 			case <-doneGen:
 				donePub <- true
-				log.Printf("CLIENT %v is done publishing\n", c.ID)
+				if !c.Quiet {
+					log.Printf("CLIENT %v is done publishing\n", c.ID)
+				}
 				return
 			}
 		}
