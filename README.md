@@ -20,6 +20,7 @@ Usage of mqtt-benchmark:
   -format="text": Output format: text|json
   -password="": MQTT password (empty if auth disabled)
   -qos=1: QoS for published messages
+  -quiet=false : Suppress logs while running (except errors and the result)
   -size=100: Size of the messages payload (bytes)
   -topic="/test": MQTT topic for incoming message
   -username="": MQTT username (empty if auth disabled)
@@ -57,7 +58,7 @@ Total Bandwidth (msg/sec):   676.112
 Similarly, in JSON:
 
 ```
-> mqtt-benchmark --broker tcp://broker.local:1883 --count 100 --size 100 --clients 100 --qos 2 --format json
+> mqtt-benchmark --broker tcp://broker.local:1883 --count 100 --size 100 --clients 100 --qos 2 --format json --quiet
 {
     runs: [
         ...

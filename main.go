@@ -67,6 +67,7 @@ func main() {
 		count    = flag.Int("count", 100, "Number of messages to send per client")
 		clients  = flag.Int("clients", 10, "Number of clients to start")
 		format   = flag.String("format", "text", "Output format: text|json")
+		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
 	)
 
 	flag.Parse()
@@ -77,7 +78,9 @@ func main() {
 	resCh := make(chan *RunResults)
 	start := time.Now()
 	for i := 0; i < *clients; i++ {
-		log.Println("Starting client ", i)
+		if !*quiet {
+			log.Println("Starting client ", i)
+		}
 		c := &Client{
 			ID:         i,
 			BrokerURL:  *broker,
@@ -87,6 +90,7 @@ func main() {
 			MsgSize:    *size,
 			MsgCount:   *count,
 			MsgQoS:     byte(*qos),
+			Quiet:      *quiet,
 		}
 		go c.Run(resCh)
 	}
