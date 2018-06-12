@@ -118,7 +118,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 
 	opts := mqtt.NewClientOptions().
 		AddBroker(c.BrokerURL).
-		SetClientID(fmt.Sprintf("mqtt-benchmark-%v-%v", time.Now(), c.ID)).
+		SetClientID(fmt.Sprintf("mqtt-benchmark-%v-%v", time.Now().Format(time.RFC3339Nano), c.ID)).
 		SetCleanSession(true).
 		SetAutoReconnect(true).
 		SetOnConnectHandler(onConnected).
