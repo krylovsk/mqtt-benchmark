@@ -68,6 +68,7 @@ func main() {
 		clients  = flag.Int("clients", 10, "Number of clients to start")
 		format   = flag.String("format", "text", "Output format: text|json")
 		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
+		numTopics = flag.Int("numTopics", 1, "Number of different topics")
 	)
 
 	flag.Parse()
@@ -91,6 +92,8 @@ func main() {
 			MsgCount:   *count,
 			MsgQoS:     byte(*qos),
 			Quiet:      *quiet,
+			nTopics: 	*numTopics,
+
 		}
 		go c.Run(resCh)
 	}

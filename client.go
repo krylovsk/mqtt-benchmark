@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"math/rand"
+	"strings"
+    "strconv"
 )
 
 import (
@@ -21,6 +24,8 @@ type Client struct {
 	MsgCount   int
 	MsgQoS     byte
 	Quiet      bool
+	nTopics    int
+
 }
 
 func (c *Client) Run(res chan *RunResults) {
@@ -68,8 +73,12 @@ func (c *Client) Run(res chan *RunResults) {
 
 func (c *Client) genMessages(ch chan *Message, done chan bool) {
 	for i := 0; i < c.MsgCount; i++ {
+		var topic = c.MsgTopic
+		if c.nTopics > 1 {
+				topic = strings.Join([]string{c.MsgTopic, strconv.Itoa(rand.Intn(c.nTopics))}, "")
+			}
 		ch <- &Message{
-			Topic:   c.MsgTopic,
+			Topic:   topic,
 			QoS:     c.MsgQoS,
 			Payload: make([]byte, c.MsgSize),
 		}
