@@ -6,7 +6,7 @@ import (
 	"time"
 	"math/rand"
 	"strings"
-    "strconv"
+    	"strconv"
 )
 
 import (
@@ -75,7 +75,7 @@ func (c *Client) genMessages(ch chan *Message, done chan bool) {
 	for i := 0; i < c.MsgCount; i++ {
 		var topic = c.MsgTopic
 		if c.nTopics > 1 {
-				topic = strings.Join([]string{c.MsgTopic, strconv.Itoa(rand.Intn(c.nTopics))}, "")
+				topic = strings.Join([]string{c.MsgTopic+"/", strconv.Itoa(rand.Intn(c.nTopics))}, "")
 			}
 		ch <- &Message{
 			Topic:   topic,
