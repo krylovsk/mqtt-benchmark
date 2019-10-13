@@ -92,7 +92,7 @@ func main() {
 			MsgCount:   *count,
 			MsgQoS:     byte(*qos),
 			Quiet:      *quiet,
-			nTopics: 	*numTopics,
+			NumTopics: 	*numTopics,
 
 		}
 		go c.Run(resCh)
