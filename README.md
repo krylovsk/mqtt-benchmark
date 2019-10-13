@@ -1,17 +1,17 @@
 MQTT benchmarking tool
 =========
+
 A simple MQTT (broker) benchmarking tool.
 
 Installation:
 
-```
+```sh
 go get github.com/krylovsk/mqtt-benchmark
 ```
 
-All dependencies are vendored with [manul](https://github.com/kovetskiy/manul).
-
 The tool supports multiple concurrent clients, configurable message size, etc:
-```
+
+```sh
 > mqtt-benchmark --help
 Usage of mqtt-benchmark:
   -broker="tcp://localhost:1883": MQTT broker endpoint as scheme://host:port
@@ -26,11 +26,13 @@ Usage of mqtt-benchmark:
   -username="": MQTT username (empty if auth disabled)
 ```
 
+> NOTE: if `count=1` or `clients=1`, the sample standard deviation will be returned as `0` (convention due to the [lack of NaN support in JSON](https://tools.ietf.org/html/rfc4627#section-2.4))
+
 Two output formats supported: human-readable plain text and JSON.
 
 Example use and output:
 
-```
+```sh
 > mqtt-benchmark --broker tcp://broker.local:1883 --count 100 --size 100 --clients 100 --qos 2 --format text
 ....
 
@@ -57,7 +59,7 @@ Total Bandwidth (msg/sec):   676.112
 
 Similarly, in JSON:
 
-```
+```json
 > mqtt-benchmark --broker tcp://broker.local:1883 --count 100 --size 100 --clients 100 --qos 2 --format json --quiet
 {
     runs: [
