@@ -55,9 +55,12 @@ func (c *Client) Run(res chan *RunResults) {
 			runResults.MsgTimeMin = stats.StatsMin(times)
 			runResults.MsgTimeMax = stats.StatsMax(times)
 			runResults.MsgTimeMean = stats.StatsMean(times)
-			runResults.MsgTimeStd = stats.StatsSampleStandardDeviation(times)
 			runResults.RunTime = duration.Seconds()
 			runResults.MsgsPerSec = float64(runResults.Successes) / duration.Seconds()
+			// calculate std if sample is > 1, otherwise leave as 0 (convention)
+			if c.MsgCount > 1 {
+				runResults.MsgTimeStd = stats.StatsSampleStandardDeviation(times)
+			}
 
 			// report results and exit
 			res <- runResults
@@ -123,8 +126,8 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		SetAutoReconnect(true).
 		SetOnConnectHandler(onConnected).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
-		log.Printf("CLIENT %v lost connection to the broker: %v. Will reconnect...\n", c.ID, reason.Error())
-	})
+			log.Printf("CLIENT %v lost connection to the broker: %v. Will reconnect...\n", c.ID, reason.Error())
+		})
 	if c.BrokerUser != "" && c.BrokerPass != "" {
 		opts.SetUsername(c.BrokerUser)
 		opts.SetPassword(c.BrokerPass)
