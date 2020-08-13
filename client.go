@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"log"
 	"time"
-)
 
-import (
 	"github.com/GaryBoone/GoStats/stats"
+
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -17,6 +16,7 @@ type Client struct {
 	BrokerUser string
 	BrokerPass string
 	MsgTopic   string
+	MsgPayload string
 	MsgSize    int
 	MsgCount   int
 	MsgQoS     byte
@@ -70,13 +70,26 @@ func (c *Client) Run(res chan *RunResults) {
 }
 
 func (c *Client) genMessages(ch chan *Message, done chan bool) {
-	for i := 0; i < c.MsgCount; i++ {
-		ch <- &Message{
-			Topic:   c.MsgTopic,
-			QoS:     c.MsgQoS,
-			Payload: make([]byte, c.MsgSize),
+	if c.MsgPayload != "" {
+
+		for i := 0; i < c.MsgCount; i++ {
+			ch <- &Message{
+				Topic:   c.MsgTopic,
+				QoS:     c.MsgQoS,
+				Payload: c.MsgPayload,
+			}
+		}
+	} else {
+
+		for i := 0; i < c.MsgCount; i++ {
+			ch <- &Message{
+				Topic:   c.MsgTopic,
+				QoS:     c.MsgQoS,
+				Payload: make([]byte, c.MsgSize),
+			}
 		}
 	}
+
 	done <- true
 	// log.Printf("CLIENT %v is done generating messages\n", c.ID)
 	return
