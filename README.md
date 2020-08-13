@@ -23,6 +23,7 @@ Usage of mqtt-benchmark:
   -quiet=false : Suppress logs while running (except errors and the result)
   -size=100: Size of the messages payload (bytes)
   -topic="/test": MQTT topic for incoming message
+  -payload="": MQTT message payload. If empty, then payload is generated based on the size parameter
   -username="": MQTT username (empty if auth disabled)
 ```
 
