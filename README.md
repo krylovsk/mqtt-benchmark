@@ -58,6 +58,33 @@ Average Bandwidth (msg/sec): 6.761
 Total Bandwidth (msg/sec):   676.112
 ```
 
+With payload specified:
+
+```sh
+> mqtt-benchmark --broker tcp://broker.local:1883 --count 100 --clients 10 --qos 1 --topic house/bedroom/temperature --payload {\"temperature\":20,\"timeStamp\":1597314150}
+....
+
+======= CLIENT 0 =======
+Ratio:               1.000 (100/100)
+Runtime (s):         0.725
+Msg time min (ms):   1.999
+Msg time max (ms):   22.997
+Msg time mean (ms):  6.955
+Msg time std (ms):   3.523
+Bandwidth (msg/sec): 137.839
+
+========= TOTAL (1) =========
+Total Ratio:                 1.000 (100/100)
+Total Runtime (sec):         0.736
+Average Runtime (sec):       0.725
+Msg time min (ms):           1.999
+Msg time max (ms):           22.997
+Msg time mean mean (ms):     6.955
+Msg time mean std (ms):      0.000
+Average Bandwidth (msg/sec): 137.839
+Total Bandwidth (msg/sec):   137.839
+```
+
 Similarly, in JSON:
 
 ```json
