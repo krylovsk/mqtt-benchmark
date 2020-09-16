@@ -3,10 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
-	"math/rand"
-	"strings"
-    "strconv"
 )
 
 import (
@@ -22,10 +20,9 @@ type Client struct {
 	MsgTopic   string
 	MsgSize    int
 	MsgCount   int
+	Delay	   int
 	MsgQoS     byte
 	Quiet      bool
-	NumTopics  int
-
 }
 
 func (c *Client) Run(res chan *RunResults) {
@@ -50,7 +47,7 @@ func (c *Client) Run(res chan *RunResults) {
 				log.Printf("CLIENT %v ERROR publishing message: %v: at %v\n", c.ID, m.Topic, m.Sent.Unix())
 				runResults.Failures++
 			} else {
-				// log.Printf("Message published: %v: sent: %v delivered: %v flight time: %v\n", m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
+				log.Printf("Message published: %v: sent: %v delivered: %v flight time: %v\n", m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
 				runResults.Successes++
 				times = append(times, m.Delivered.Sub(m.Sent).Seconds()*1000) // in milliseconds
 			}
@@ -60,9 +57,12 @@ func (c *Client) Run(res chan *RunResults) {
 			runResults.MsgTimeMin = stats.StatsMin(times)
 			runResults.MsgTimeMax = stats.StatsMax(times)
 			runResults.MsgTimeMean = stats.StatsMean(times)
-			runResults.MsgTimeStd = stats.StatsSampleStandardDeviation(times)
 			runResults.RunTime = duration.Seconds()
 			runResults.MsgsPerSec = float64(runResults.Successes) / duration.Seconds()
+			// calculate std if sample is > 1, otherwise leave as 0 (convention)
+			if c.MsgCount > 1 {
+				runResults.MsgTimeStd = stats.StatsSampleStandardDeviation(times)
+			}
 
 			// report results and exit
 			res <- runResults
@@ -73,14 +73,10 @@ func (c *Client) Run(res chan *RunResults) {
 
 func (c *Client) genMessages(ch chan *Message, done chan bool) {
 	for i := 0; i < c.MsgCount; i++ {
-		var topic = c.MsgTopic
-		if c.NumTopics > 1 {
-				topic = strings.Join([]string{c.MsgTopic+"/", strconv.Itoa(rand.Intn(c.NumTopics))}, "")
-			}
 		ch <- &Message{
-			Topic:   topic,
+			Topic:   c.MsgTopic,
 			QoS:     c.MsgQoS,
-			Payload: make([]byte, c.MsgSize),
+			Payload: strconv.FormatInt(time.Now().UnixNano()/1000000, 10),
 		}
 	}
 	done <- true
@@ -108,7 +104,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 					m.Error = false
 				}
 				out <- m
-
+				time.Sleep(time.Duration(c.Delay) * time.Second)	
 				if ctr > 0 && ctr%100 == 0 {
 					if !c.Quiet {
 						log.Printf("CLIENT %v published %v messages and keeps publishing...\n", c.ID, ctr)
@@ -132,8 +128,8 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		SetAutoReconnect(true).
 		SetOnConnectHandler(onConnected).
 		SetConnectionLostHandler(func(client mqtt.Client, reason error) {
-		log.Printf("CLIENT %v lost connection to the broker: %v. Will reconnect...\n", c.ID, reason.Error())
-	})
+			log.Printf("CLIENT %v lost connection to the broker: %v. Will reconnect...\n", c.ID, reason.Error())
+		})
 	if c.BrokerUser != "" && c.BrokerPass != "" {
 		opts.SetUsername(c.BrokerUser)
 		opts.SetPassword(c.BrokerPass)

@@ -66,21 +66,25 @@ func main() {
 		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
 		count    = flag.Int("count", 100, "Number of messages to send per client")
 		clients  = flag.Int("clients", 10, "Number of clients to start")
+		delay    = flag.Int("delay", 1, "Delay between messages")
 		format   = flag.String("format", "text", "Output format: text|json")
 		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
-		numTopics = flag.Int("numTopics", 1, "Number of different topics")
 	)
 
 	flag.Parse()
 	if *clients < 1 {
-		log.Fatal("Invlalid arguments")
+		log.Fatalf("Invalid arguments: number of clients should be > 1, given: %v", *clients)
+	}
+
+	if *count < 1 {
+		log.Fatalf("Invalid arguments: messages count should be > 1, given: %v", *count)
 	}
 
 	resCh := make(chan *RunResults)
 	start := time.Now()
 	for i := 0; i < *clients; i++ {
 		if !*quiet {
-			log.Println("Starting client ", i)
+			log.Println("Starting cliento ", i)
 		}
 		c := &Client{
 			ID:         i,
@@ -90,10 +94,9 @@ func main() {
 			MsgTopic:   *topic,
 			MsgSize:    *size,
 			MsgCount:   *count,
+			Delay:	    *delay,
 			MsgQoS:     byte(*qos),
 			Quiet:      *quiet,
-			NumTopics: 	*numTopics,
-
 		}
 		go c.Run(resCh)
 	}
@@ -104,12 +107,13 @@ func main() {
 		results[i] = <-resCh
 	}
 	totalTime := time.Now().Sub(start)
-	totals := calculateTotalResults(results, totalTime)
+	totals := calculateTotalResults(results, totalTime, *clients)
 
 	// print stats
 	printResults(results, totals, *format)
 }
-func calculateTotalResults(results []*RunResults, totalTime time.Duration) *TotalResults {
+
+func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampleSize int) *TotalResults {
 	totals := new(TotalResults)
 	totals.TotalRunTime = totalTime.Seconds()
 
@@ -141,7 +145,10 @@ func calculateTotalResults(results []*RunResults, totalTime time.Duration) *Tota
 	totals.AvgMsgsPerSec = stats.StatsMean(msgsPerSecs)
 	totals.AvgRunTime = stats.StatsMean(runTimes)
 	totals.MsgTimeMeanAvg = stats.StatsMean(msgTimeMeans)
-	totals.MsgTimeMeanStd = stats.StatsSampleStandardDeviation(msgTimeMeans)
+	// calculate std if sample is > 1, otherwise leave as 0 (convention)
+	if sampleSize > 1 {
+		totals.MsgTimeMeanStd = stats.StatsSampleStandardDeviation(msgTimeMeans)
+	}
 
 	return totals
 }
@@ -153,7 +160,10 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 			Runs:   results,
 			Totals: totals,
 		}
-		data, _ := json.Marshal(jr)
+		data, err := json.Marshal(jr)
+		if err != nil {
+			log.Fatalf("Error marshalling results: %v", err)
+		}
 		var out bytes.Buffer
 		json.Indent(&out, data, "", "\t")
 
