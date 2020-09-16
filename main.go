@@ -84,7 +84,7 @@ func main() {
 	start := time.Now()
 	for i := 0; i < *clients; i++ {
 		if !*quiet {
-			log.Println("Starting cliento ", i)
+			log.Println("Starting client ", i)
 		}
 		c := &Client{
 			ID:         i,
