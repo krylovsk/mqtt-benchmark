@@ -72,6 +72,7 @@ func main() {
 		delay    = flag.Int("delay", 1, "Delay between messages")
 		format   = flag.String("format", "text", "Output format: text|json")
 		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
+		folderName = flag.String("name", "test", "Name of the simulation folder")
 	)
 
 	flag.Parse()
@@ -113,7 +114,7 @@ func main() {
 	totals := calculateTotalResults(results, totalTime, *clients)
 
 	// print stats
-	printResults(results, totals, start, *broker, *format)
+	printResults(results, totals, start, *broker, *folderName, *format)
 }
 
 func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampleSize int) *TotalResults {
@@ -156,7 +157,7 @@ func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampl
 	return totals
 }
 
-func printResults(results []*RunResults, totals *TotalResults, startPub time.Time, broker string, format string) {
+func printResults(results []*RunResults, totals *TotalResults, startPub time.Time, broker string, folder string, format string) {
 	data := [][]string{}
 	var resToString [7]string
 
@@ -203,10 +204,11 @@ func printResults(results []*RunResults, totals *TotalResults, startPub time.Tim
 	}
 	
 	//create path. experiment/MMDD
-	path := fmt.Sprintf("experiments/%v", startPub.Format("0102"))
+	path := fmt.Sprintf("experiments/%v/%v", startPub.Format("0102"), folder)
 	os.MkdirAll(path, os.ModePerm)
 
 	//filename: b2_pubtime_HHmmSS 
+	fmt.Printf("%v/b%v_pubtime_%v.csv", path, broker, startPub.Format("150405"))
 	file, err := os.Create(fmt.Sprintf("%v/b%v_pubtime_%v.csv", path, broker, startPub.Format("150405")))
 	checkError("Cannot create file", err)
 	defer file.Close()
