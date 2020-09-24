@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -19,6 +20,7 @@ type Client struct {
 	MsgTopic   string
 	MsgSize    int
 	MsgCount   int
+	Delay	   int
 	MsgQoS     byte
 	Quiet      bool
 }
@@ -45,7 +47,7 @@ func (c *Client) Run(res chan *RunResults) {
 				log.Printf("CLIENT %v ERROR publishing message: %v: at %v\n", c.ID, m.Topic, m.Sent.Unix())
 				runResults.Failures++
 			} else {
-				// log.Printf("Message published: %v: sent: %v delivered: %v flight time: %v\n", m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
+				log.Printf("Message published: %v: sent: %v delivered: %v flight time: %v\n", m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
 				runResults.Successes++
 				times = append(times, m.Delivered.Sub(m.Sent).Seconds()*1000) // in milliseconds
 			}
@@ -74,7 +76,7 @@ func (c *Client) genMessages(ch chan *Message, done chan bool) {
 		ch <- &Message{
 			Topic:   c.MsgTopic,
 			QoS:     c.MsgQoS,
-			Payload: make([]byte, c.MsgSize),
+			Payload: strconv.FormatInt(time.Now().UnixNano()/1000000, 10),
 		}
 	}
 	done <- true
@@ -102,7 +104,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 					m.Error = false
 				}
 				out <- m
-
+				time.Sleep(time.Duration(c.Delay) * time.Second)	
 				if ctr > 0 && ctr%100 == 0 {
 					if !c.Quiet {
 						log.Printf("CLIENT %v published %v messages and keeps publishing...\n", c.ID, ctr)

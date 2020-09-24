@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/GaryBoone/GoStats/stats"
@@ -66,8 +69,10 @@ func main() {
 		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
 		count    = flag.Int("count", 100, "Number of messages to send per client")
 		clients  = flag.Int("clients", 10, "Number of clients to start")
+		delay    = flag.Int("delay", 1, "Delay between messages")
 		format   = flag.String("format", "text", "Output format: text|json")
 		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
+		folderName = flag.String("name", "test", "Name of the simulation folder")
 	)
 
 	flag.Parse()
@@ -93,6 +98,7 @@ func main() {
 			MsgTopic:   *topic,
 			MsgSize:    *size,
 			MsgCount:   *count,
+			Delay:	    *delay,
 			MsgQoS:     byte(*qos),
 			Quiet:      *quiet,
 		}
@@ -108,7 +114,7 @@ func main() {
 	totals := calculateTotalResults(results, totalTime, *clients)
 
 	// print stats
-	printResults(results, totals, *format)
+	printResults(results, totals, start, *broker, *folderName, *format)
 }
 
 func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampleSize int) *TotalResults {
@@ -151,7 +157,10 @@ func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampl
 	return totals
 }
 
-func printResults(results []*RunResults, totals *TotalResults, format string) {
+func printResults(results []*RunResults, totals *TotalResults, startPub time.Time, broker string, folder string, format string) {
+	data := [][]string{}
+	var resToString [7]string
+
 	switch format {
 	case "json":
 		jr := JSONResults{
@@ -188,5 +197,47 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 		fmt.Printf("Average Bandwidth (msg/sec): %.3f\n", totals.AvgMsgsPerSec)
 		fmt.Printf("Total Bandwidth (msg/sec):   %.3f\n", totals.TotalMsgsPerSec)
 	}
+	
+	if strings.Contains(broker, ".") {
+		//remove tcp:// remove port (after :)
+		broker = strings.Split(broker, ".")[2]
+	}
+	
+	//create path. experiment/MMDD
+	path := fmt.Sprintf("experiments/%v/%v", startPub.Format("0102"), folder)
+	os.MkdirAll(path, os.ModePerm)
+
+	//filename: b2_pubtime_HHmmSS 
+	fmt.Printf("%v/b%v_pubtime_%v.csv", path, broker, startPub.Format("150405"))
+	file, err := os.Create(fmt.Sprintf("%v/pubtime_b%v_%v.csv", path, broker, startPub.Format("150405")))
+	checkError("Cannot create file", err)
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, res := range results{
+		resToString[0] = fmt.Sprintf("%d", res.ID)
+		resToString[1] = fmt.Sprintf("%.3f", res.RunTime)
+		resToString[2] = fmt.Sprintf("%.3f", res.MsgTimeMin)
+		resToString[3] = fmt.Sprintf("%.3f", res.MsgTimeMax)
+		resToString[4] = fmt.Sprintf("%.3f", res.MsgTimeMean)
+		resToString[5] = fmt.Sprintf("%.3f", res.MsgTimeStd)
+		resToString[6] = fmt.Sprintf("%.3f", res.MsgsPerSec)
+		data = append(data, []string{fmt.Sprintf("broker_%v", broker), resToString[0], resToString[1], resToString[2], resToString[3],
+						resToString[4], resToString[5], resToString[6]})
+	}
+
+	for _, value := range data {
+        	err := writer.Write(value)
+		checkError("Cannot write to file", err)
+	}	
+
 	return
+}
+
+func checkError(message string, err error) {
+    if err != nil {
+        log.Fatal(message, err)
+    }
 }
