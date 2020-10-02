@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -23,6 +26,8 @@ type Client struct {
 	Delay	   int
 	MsgQoS     byte
 	Quiet      bool
+	Start	   time.Time
+	Folder	   string
 }
 
 func (c *Client) Run(res chan *RunResults) {
@@ -31,6 +36,8 @@ func (c *Client) Run(res chan *RunResults) {
 	doneGen := make(chan bool)
 	donePub := make(chan bool)
 	runResults := new(RunResults)
+	pubData := [][]string{}
+	brokerID := c.BrokerURL
 
 	started := time.Now()
 	// start generator
@@ -50,6 +57,11 @@ func (c *Client) Run(res chan *RunResults) {
 				log.Printf("Message published: %v: sent: %v delivered: %v flight time: %v\n", m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
 				runResults.Successes++
 				times = append(times, m.Delivered.Sub(m.Sent).Seconds()*1000) // in milliseconds
+				pubData = append(pubData, []string{fmt.Sprintf("%v", c.ID),
+								   fmt.Sprintf("%v", m.Sent.Format("2006-01-02T15:04:05.000000000")), 
+								   fmt.Sprintf("%v", m.Delivered.Format("2006-01-02T15:04:05.000000000")),
+								   fmt.Sprintf("%v", m.Delivered.Sub(m.Sent).Seconds()*1000),
+								   fmt.Sprintf("%v", c.MsgQoS)})			
 			}
 		case <-donePub:
 			// calculate results
@@ -63,6 +75,28 @@ func (c *Client) Run(res chan *RunResults) {
 			if c.MsgCount > 1 {
 				runResults.MsgTimeStd = stats.StatsSampleStandardDeviation(times)
 			}
+
+			//parse broker ID
+			if strings.Contains(brokerID, ".") {
+				//remove tcp:// remove port (after :)
+				brokerID = strings.Split(brokerID, ".")[2]
+			}
+			//create file
+			path := fmt.Sprintf("experiments/%v/%v", c.Start.Format("0102"), c.Folder)
+			os.MkdirAll(path, os.ModePerm)
+			
+			_file, err := os.Create(fmt.Sprintf("%v/b%v_rawC%v_pub_%v.csv", path, brokerID, c.ID, c.Start.Format("150405")))
+			checkError("Cannot create file", err)
+			defer _file.Close()
+
+			_writer := csv.NewWriter(_file)
+			defer _writer.Flush()
+
+			//write to file
+			for _, value := range pubData {
+        			err := _writer.Write(value)
+				checkError("Cannot write to file", err)
+			}	
 
 			// report results and exit
 			res <- runResults

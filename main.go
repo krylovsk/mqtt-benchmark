@@ -101,6 +101,8 @@ func main() {
 			Delay:	    *delay,
 			MsgQoS:     byte(*qos),
 			Quiet:      *quiet,
+			Start:      start,
+			Folder:	    *folderName,
 		}
 		go c.Run(resCh)
 	}
