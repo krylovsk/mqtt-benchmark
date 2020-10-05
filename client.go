@@ -86,7 +86,7 @@ func (c *Client) Run(res chan *RunResults) {
 			//folder should be already present (created by the bash script)
 			os.MkdirAll(c.Folder, os.ModePerm)
 			
-			_file, err := os.Create(fmt.Sprintf("%v/b%v_rawC%v_pub_%v.csv", c.Folder, brokerID, c.ID, c.FileName))
+			_file, err := os.Create(fmt.Sprintf("%v/raw/b%v_rawC%v_pub_%v.csv", c.Folder, brokerID, c.ID, c.FileName))
 			checkError("Cannot create file", err)
 			defer _file.Close()
 
