@@ -72,7 +72,7 @@ func main() {
 		delay      = flag.Int("delay", 1, "Delay between messages")
 		format     = flag.String("format", "text", "Output format: text|json")
 		quiet      = flag.Bool("quiet", false, "Suppress logs while running")
-		folderName = flag.String("folder-name", "test", "Name of the simulation folder")
+		folderName = flag.String("folder", "test", "Name of the simulation folder")
 		fileName   = flag.String("file-name", "day", "Name of the file")
 	)
 
