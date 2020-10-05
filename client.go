@@ -26,7 +26,7 @@ type Client struct {
 	Delay	   int
 	MsgQoS     byte
 	Quiet      bool
-	Start	   time.Time
+	FileName   string
 	Folder	   string
 }
 
@@ -81,11 +81,12 @@ func (c *Client) Run(res chan *RunResults) {
 				//remove tcp:// remove port (after :)
 				brokerID = strings.Split(brokerID, ".")[2]
 			}
+
 			//create file
-			path := fmt.Sprintf("experiments/%v/%v", c.Start.Format("0102"), c.Folder)
-			os.MkdirAll(path, os.ModePerm)
+			//folder should be already present (created by the bash script)
+			os.MkdirAll(c.Folder, os.ModePerm)
 			
-			_file, err := os.Create(fmt.Sprintf("%v/b%v_rawC%v_pub_%v.csv", path, brokerID, c.ID, c.Start.Format("150405")))
+			_file, err := os.Create(fmt.Sprintf("%v/b%v_rawC%v_pub_%v.csv", c.Folder, brokerID, c.ID, c.FileName))
 			checkError("Cannot create file", err)
 			defer _file.Close()
 

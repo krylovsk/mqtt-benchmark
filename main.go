@@ -61,18 +61,19 @@ type JSONResults struct {
 func main() {
 
 	var (
-		broker   = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
-		topic    = flag.String("topic", "/test", "MQTT topic for outgoing messages")
-		username = flag.String("username", "", "MQTT username (empty if auth disabled)")
-		password = flag.String("password", "", "MQTT password (empty if auth disabled)")
-		qos      = flag.Int("qos", 1, "QoS for published messages")
-		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
-		count    = flag.Int("count", 100, "Number of messages to send per client")
-		clients  = flag.Int("clients", 10, "Number of clients to start")
-		delay    = flag.Int("delay", 1, "Delay between messages")
-		format   = flag.String("format", "text", "Output format: text|json")
-		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
-		folderName = flag.String("name", "test", "Name of the simulation folder")
+		broker     = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
+		topic      = flag.String("topic", "/test", "MQTT topic for outgoing messages")
+		username   = flag.String("username", "", "MQTT username (empty if auth disabled)")
+		password   = flag.String("password", "", "MQTT password (empty if auth disabled)")
+		qos        = flag.Int("qos", 1, "QoS for published messages")
+		size       = flag.Int("size", 100, "Size of the messages payload (bytes)")
+		count      = flag.Int("count", 100, "Number of messages to send per client")
+		clients    = flag.Int("clients", 10, "Number of clients to start")
+		delay      = flag.Int("delay", 1, "Delay between messages")
+		format     = flag.String("format", "text", "Output format: text|json")
+		quiet      = flag.Bool("quiet", false, "Suppress logs while running")
+		folderName = flag.String("folder-name", "test", "Name of the simulation folder")
+		fileName   = flag.String("file-name", "day", "Name of the file")
 	)
 
 	flag.Parse()
@@ -101,7 +102,7 @@ func main() {
 			Delay:	    *delay,
 			MsgQoS:     byte(*qos),
 			Quiet:      *quiet,
-			Start:      start,
+			FileName:   *fileName,
 			Folder:	    *folderName,
 		}
 		go c.Run(resCh)
@@ -116,7 +117,7 @@ func main() {
 	totals := calculateTotalResults(results, totalTime, *clients)
 
 	// print stats
-	printResults(results, totals, start, *broker, *folderName, *format)
+	printResults(results, totals, *broker, *folderName, *fileName, *format)
 }
 
 func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampleSize int) *TotalResults {
@@ -159,7 +160,7 @@ func calculateTotalResults(results []*RunResults, totalTime time.Duration, sampl
 	return totals
 }
 
-func printResults(results []*RunResults, totals *TotalResults, startPub time.Time, broker string, folder string, format string) {
+func printResults(results []*RunResults, totals *TotalResults, broker string, folder string, name string, format string) {
 	data := [][]string{}
 	var resToString [7]string
 
@@ -207,12 +208,11 @@ func printResults(results []*RunResults, totals *TotalResults, startPub time.Tim
 		broker = strings.Split(broker, ".")[2]
 	}
 	
-	//create path. experiment/MMDD
-	path := fmt.Sprintf("experiments/%v/%v", startPub.Format("0102"), folder)
-	os.MkdirAll(path, os.ModePerm)
+	//folder should be already present (created by the bash script)
+	os.MkdirAll(folder, os.ModePerm)
 
 	//filename: b2_pubtime_HHmmSS 
-	file, err := os.Create(fmt.Sprintf("%v/pubtime_b%v_%v.csv", path, broker, startPub.Format("150405")))
+	file, err := os.Create(fmt.Sprintf("%v/pubtime_b%v_%v.csv", folder, broker, name))
 	checkError("Cannot create file", err)
 	defer file.Close()
 
