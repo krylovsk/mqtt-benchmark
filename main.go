@@ -177,6 +177,8 @@ func printResults(results []*RunResults, totals *TotalResults, startPub time.Tim
 		json.Indent(&out, data, "", "\t")
 
 		fmt.Println(string(out.Bytes()))
+	case "none":
+		fmt.Println("Clients done")
 	default:
 		for _, res := range results {
 			fmt.Printf("======= CLIENT %d =======\n", res.ID)
@@ -210,7 +212,6 @@ func printResults(results []*RunResults, totals *TotalResults, startPub time.Tim
 	os.MkdirAll(path, os.ModePerm)
 
 	//filename: b2_pubtime_HHmmSS 
-	fmt.Printf("%v/b%v_pubtime_%v.csv", path, broker, startPub.Format("150405"))
 	file, err := os.Create(fmt.Sprintf("%v/pubtime_b%v_%v.csv", path, broker, startPub.Format("150405")))
 	checkError("Cannot create file", err)
 	defer file.Close()
