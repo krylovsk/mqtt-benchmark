@@ -54,7 +54,7 @@ func (c *Client) Run(res chan *RunResults) {
 				log.Printf("CLIENT %v ERROR publishing message: %v: at %v\n", c.ID, m.Topic, m.Sent.Unix())
 				runResults.Failures++
 			} else {
-				log.Printf("Message published: %v: sent: %v delivered: %v flight time: %v\n", m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
+				log.Printf("%v) Message published: %v: sent: %v delivered: %v flight time: %v\n", runResults.Successes, m.Topic, m.Sent, m.Delivered, m.Delivered.Sub(m.Sent))
 				runResults.Successes++
 				times = append(times, m.Delivered.Sub(m.Sent).Seconds()*1000) // in milliseconds
 				pubData = append(pubData, []string{fmt.Sprintf("%v", c.ID),

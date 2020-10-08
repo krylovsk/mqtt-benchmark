@@ -72,8 +72,8 @@ func main() {
 		delay      = flag.Int("delay", 1, "Delay between messages")
 		format     = flag.String("format", "text", "Output format: text|json")
 		quiet      = flag.Bool("quiet", false, "Suppress logs while running")
-		folderName = flag.String("folder", "test", "Name of the simulation folder")
-		fileName   = flag.String("file-name", "day", "Name of the file")
+		folderName = flag.String("folder", "experiments/untracked", "Name of the simulation folder")
+		fileName   = flag.String("file-name", fmt.Sprintf("%v", time.Now().Format("150405")), "Name of the file")
 	)
 
 	flag.Parse()
@@ -87,6 +87,7 @@ func main() {
 
 	resCh := make(chan *RunResults)
 	start := time.Now()
+
 	for i := 0; i < *clients; i++ {
 		if !*quiet {
 			log.Println("Starting client ", i)
