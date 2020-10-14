@@ -80,6 +80,8 @@ func (c *Client) Run(res chan *RunResults) {
 			if strings.Contains(brokerID, ".") {
 				//remove tcp:// remove port (after :)
 				brokerID = strings.Split(brokerID, ".")[2]
+			} else {
+				brokerID = "local"	
 			}
 
 			//create file
@@ -123,12 +125,22 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		if !c.Quiet {
 			log.Printf("CLIENT %v is connected to the broker %v\n", c.ID, c.BrokerURL)
 		}
+
+		BrokerIP := c.BrokerURL
+		if strings.Contains(c.BrokerURL, ".") {
+		//remove tcp:// remove port (after :)
+			BrokerIP = strings.Split(c.BrokerURL, ".")[2]
+		} else {
+			BrokerIP = "local"	
+		}
+		
 		ctr := 0
 		for {
 			select {
 			case m := <-in:
 				m.Sent = time.Now()
-				token := client.Publish(m.Topic, m.QoS, false, m.Payload)
+				payload := fmt.Sprintf("%v,%v,%v,xx", strconv.FormatInt(time.Now().UnixNano()/1000000, 10), c.ID, BrokerIP)
+				token := client.Publish(m.Topic, m.QoS, false, payload)
 				token.Wait()
 				if token.Error() != nil {
 					log.Printf("CLIENT %v Error sending message: %v\n", c.ID, token.Error())

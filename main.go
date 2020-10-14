@@ -72,6 +72,7 @@ func main() {
 		delay      = flag.Int("delay", 1, "Delay between messages")
 		format     = flag.String("format", "text", "Output format: text|json")
 		quiet      = flag.Bool("quiet", false, "Suppress logs while running")
+		block	   = flag.Int("block", 0, "ms of block between two clients")
 		folderName = flag.String("folder", "experiments/untracked", "Name of the simulation folder")
 		fileName   = flag.String("file-name", fmt.Sprintf("%v", time.Now().Format("150405")), "Name of the file")
 	)
@@ -107,6 +108,7 @@ func main() {
 			Folder:	    *folderName,
 		}
 		go c.Run(resCh)
+		time.Sleep(time.Duration(*block) * time.Millisecond)
 	}
 
 	// collect the results
@@ -207,6 +209,8 @@ func printResults(results []*RunResults, totals *TotalResults, broker string, fo
 	if strings.Contains(broker, ".") {
 		//remove tcp:// remove port (after :)
 		broker = strings.Split(broker, ".")[2]
+	} else {
+		broker = "local"	
 	}
 	
 	//folder should be already present (created by the bash script)
