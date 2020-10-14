@@ -139,7 +139,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 			select {
 			case m := <-in:
 				m.Sent = time.Now()
-				payload := fmt.Sprintf("%v,%v,%v,xx", strconv.FormatInt(time.Now().UnixNano()/1000000, 10), c.ID, BrokerIP)
+				payload := fmt.Sprintf("%v,%v,%v,xx", BrokerIP, c.ID, strconv.FormatInt(time.Now().UnixNano()/1000000, 10))
 				token := client.Publish(m.Topic, m.QoS, false, payload)
 				token.Wait()
 				if token.Error() != nil {
