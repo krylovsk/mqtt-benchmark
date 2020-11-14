@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"time"
@@ -22,6 +23,7 @@ type Client struct {
 	MsgQoS      byte
 	Quiet       bool
 	WaitTimeout time.Duration
+	TlsConfig   *tls.Config
 }
 
 func (c *Client) Run(res chan *RunResults) {
@@ -136,6 +138,10 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		opts.SetUsername(c.BrokerUser)
 		opts.SetPassword(c.BrokerPass)
 	}
+	if c.TlsConfig != nil {
+		opts.SetTLSConfig(c.TlsConfig)
+	}
+
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	token.Wait()
