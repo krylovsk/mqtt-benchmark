@@ -63,6 +63,7 @@ func main() {
 		username = flag.String("username", "", "MQTT username (empty if auth disabled)")
 		password = flag.String("password", "", "MQTT password (empty if auth disabled)")
 		qos      = flag.Int("qos", 1, "QoS for published messages")
+		wait     = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
 		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
 		count    = flag.Int("count", 100, "Number of messages to send per client")
 		clients  = flag.Int("clients", 10, "Number of clients to start")
@@ -86,15 +87,16 @@ func main() {
 			log.Println("Starting client ", i)
 		}
 		c := &Client{
-			ID:         i,
-			BrokerURL:  *broker,
-			BrokerUser: *username,
-			BrokerPass: *password,
-			MsgTopic:   *topic,
-			MsgSize:    *size,
-			MsgCount:   *count,
-			MsgQoS:     byte(*qos),
-			Quiet:      *quiet,
+			ID:          i,
+			BrokerURL:   *broker,
+			BrokerUser:  *username,
+			BrokerPass:  *password,
+			MsgTopic:    *topic,
+			MsgSize:     *size,
+			MsgCount:    *count,
+			MsgQoS:      byte(*qos),
+			Quiet:       *quiet,
+			WaitTimeout: time.Duration(*wait) * time.Millisecond,
 		}
 		go c.Run(resCh)
 	}

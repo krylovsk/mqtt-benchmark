@@ -12,15 +12,16 @@ import (
 )
 
 type Client struct {
-	ID         int
-	BrokerURL  string
-	BrokerUser string
-	BrokerPass string
-	MsgTopic   string
-	MsgSize    int
-	MsgCount   int
-	MsgQoS     byte
-	Quiet      bool
+	ID          int
+	BrokerURL   string
+	BrokerUser  string
+	BrokerPass  string
+	MsgTopic    string
+	MsgSize     int
+	MsgCount    int
+	MsgQoS      byte
+	Quiet       bool
+	WaitTimeout time.Duration
 }
 
 func (c *Client) Run(res chan *RunResults) {
@@ -93,8 +94,11 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 			case m := <-in:
 				m.Sent = time.Now()
 				token := client.Publish(m.Topic, m.QoS, false, m.Payload)
-				token.Wait()
-				if token.Error() != nil {
+				res := token.WaitTimeout(c.WaitTimeout)
+				if !res {
+					log.Printf("CLIENT %v Timeout sending message: %v\n", c.ID, token.Error())
+					m.Error = true
+				} else if token.Error() != nil {
 					log.Printf("CLIENT %v Error sending message: %v\n", c.ID, token.Error())
 					m.Error = true
 				} else {

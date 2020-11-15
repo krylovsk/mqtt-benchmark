@@ -24,6 +24,7 @@ Usage of mqtt-benchmark:
   -size=100: Size of the messages payload (bytes)
   -topic="/test": MQTT topic for incoming message
   -username="": MQTT username (empty if auth disabled)
+  -wait="60000": QoS 1 wait timeout in milliseconds (default 60000)
 ```
 
 > NOTE: if `count=1` or `clients=1`, the sample standard deviation will be returned as `0` (convention due to the [lack of NaN support in JSON](https://tools.ietf.org/html/rfc4627#section-2.4))
