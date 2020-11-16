@@ -83,6 +83,14 @@ func main() {
 		log.Fatalf("Invalid arguments: messages count should be > 1, given: %v", *count)
 	}
 
+	if *cert != "" && *key == "" {
+		log.Fatal("Invalid arguments: private key path missing")
+	}
+
+	if *cert == "" && *key != "" {
+		log.Fatalf("Invalid arguments: certificate path missing")
+	}
+
 	var tlsConfig *tls.Config
 	if *cert != "" && *key != "" {
 		tlsConfig = generateTlsConfig(*cert, *key)
