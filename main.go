@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -69,6 +70,8 @@ func main() {
 		clients  = flag.Int("clients", 10, "Number of clients to start")
 		format   = flag.String("format", "text", "Output format: text|json")
 		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
+		cert     = flag.String("cert", "", "File path to your client certificate in PEM format")
+		key      = flag.String("key", "", "File path to your private key in PEM format")
 	)
 
 	flag.Parse()
@@ -78,6 +81,19 @@ func main() {
 
 	if *count < 1 {
 		log.Fatalf("Invalid arguments: messages count should be > 1, given: %v", *count)
+	}
+
+	if *cert != "" && *key == "" {
+		log.Fatal("Invalid arguments: private key path missing")
+	}
+
+	if *cert == "" && *key != "" {
+		log.Fatalf("Invalid arguments: certificate path missing")
+	}
+
+	var tlsConfig *tls.Config
+	if *cert != "" && *key != "" {
+		tlsConfig = generateTlsConfig(*cert, *key)
 	}
 
 	resCh := make(chan *RunResults)
@@ -97,6 +113,7 @@ func main() {
 			MsgQoS:      byte(*qos),
 			Quiet:       *quiet,
 			WaitTimeout: time.Duration(*wait) * time.Millisecond,
+			TlsConfig:   tlsConfig,
 		}
 		go c.Run(resCh)
 	}
@@ -191,4 +208,20 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 		fmt.Printf("Total Bandwidth (msg/sec):   %.3f\n", totals.TotalMsgsPerSec)
 	}
 	return
+}
+
+func generateTlsConfig(certFile string, keyFile string) *tls.Config {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("Error reading certificate files: %v", err)
+	}
+
+	cfg := tls.Config{
+		ClientAuth:         tls.NoClientCert,
+		ClientCAs:          nil,
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert},
+	}
+
+	return &cfg
 }
