@@ -10,6 +10,7 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Client implements an MQTT client running benchmark test
 type Client struct {
 	ID          int
 	ClientID    string
@@ -22,9 +23,10 @@ type Client struct {
 	MsgQoS      byte
 	Quiet       bool
 	WaitTimeout time.Duration
-	TlsConfig   *tls.Config
+	TLSConfig   *tls.Config
 }
 
+// Run runs benchmark tests and writes results in the provided channel
 func (c *Client) Run(res chan *RunResults) {
 	newMsgs := make(chan *Message)
 	pubMsgs := make(chan *Message)
@@ -137,8 +139,8 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		opts.SetUsername(c.BrokerUser)
 		opts.SetPassword(c.BrokerPass)
 	}
-	if c.TlsConfig != nil {
-		opts.SetTLSConfig(c.TlsConfig)
+	if c.TLSConfig != nil {
+		opts.SetTLSConfig(c.TLSConfig)
 	}
 
 	client := mqtt.NewClient(opts)
