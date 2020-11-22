@@ -16,6 +16,7 @@ The tool supports multiple concurrent clients, configurable message size, etc:
 Usage of mqtt-benchmark:
   -broker="tcp://localhost:1883": MQTT broker endpoint as scheme://host:port
   -cert="cert.pem": File path to your client certificate in PEM format
+  -client-id="mqtt-benchmark": MQTT client id
   -clients=10: Number of clients to start
   -count=100: Number of messages to send per client
   -format="text": Output format: text|json
