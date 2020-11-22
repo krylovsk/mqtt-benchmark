@@ -58,20 +58,20 @@ type JSONResults struct {
 
 func main() {
 	var (
-		broker   = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
-		topic    = flag.String("topic", "/test", "MQTT topic for outgoing messages")
-		clientID = flag.String("client-id", "mqtt-benchmark", "MQTT client id")
-		username = flag.String("username", "", "MQTT username (empty if auth disabled)")
-		password = flag.String("password", "", "MQTT password (empty if auth disabled)")
-		qos      = flag.Int("qos", 1, "QoS for published messages")
-		wait     = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
-		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
-		count    = flag.Int("count", 100, "Number of messages to send per client")
-		clients  = flag.Int("clients", 10, "Number of clients to start")
-		format   = flag.String("format", "text", "Output format: text|json")
-		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
-		cert     = flag.String("cert", "", "File path to your client certificate in PEM format")
-		key      = flag.String("key", "", "File path to your private key in PEM format")
+		broker       = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
+		topic        = flag.String("topic", "/test", "MQTT topic for outgoing messages")
+		username     = flag.String("username", "", "MQTT client username (empty if auth disabled)")
+		password     = flag.String("password", "", "MQTT client password (empty if auth disabled)")
+		qos          = flag.Int("qos", 1, "QoS for published messages")
+		wait         = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
+		size         = flag.Int("size", 100, "Size of the messages payload (bytes)")
+		count        = flag.Int("count", 100, "Number of messages to send per client")
+		clients      = flag.Int("clients", 10, "Number of clients to start")
+		format       = flag.String("format", "text", "Output format: text|json")
+		quiet        = flag.Bool("quiet", false, "Suppress logs while running")
+		clientPrefix = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
+		clientCert   = flag.String("client-cert", "", "Path to client certificate in PEM format")
+		clientKey    = flag.String("client-key", "", "Path to private clientKey in PEM format")
 	)
 
 	flag.Parse()
@@ -83,17 +83,17 @@ func main() {
 		log.Fatalf("Invalid arguments: messages count should be > 1, given: %v", *count)
 	}
 
-	if *cert != "" && *key == "" {
-		log.Fatal("Invalid arguments: private key path missing")
+	if *clientCert != "" && *clientKey == "" {
+		log.Fatal("Invalid arguments: private clientKey path missing")
 	}
 
-	if *cert == "" && *key != "" {
+	if *clientCert == "" && *clientKey != "" {
 		log.Fatalf("Invalid arguments: certificate path missing")
 	}
 
 	var tlsConfig *tls.Config
-	if *cert != "" && *key != "" {
-		tlsConfig = generateTlsConfig(*cert, *key)
+	if *clientCert != "" && *clientKey != "" {
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey)
 	}
 
 	resCh := make(chan *RunResults)
@@ -104,7 +104,7 @@ func main() {
 		}
 		c := &Client{
 			ID:          i,
-			ClientID:    *clientID,
+			ClientID:    *clientPrefix,
 			BrokerURL:   *broker,
 			BrokerUser:  *username,
 			BrokerPass:  *password,
@@ -114,7 +114,7 @@ func main() {
 			MsgQoS:      byte(*qos),
 			Quiet:       *quiet,
 			WaitTimeout: time.Duration(*wait) * time.Millisecond,
-			TlsConfig:   tlsConfig,
+			TLSConfig:   tlsConfig,
 		}
 		go c.Run(resCh)
 	}
@@ -183,7 +183,7 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 			log.Fatalf("Error marshalling results: %v", err)
 		}
 		var out bytes.Buffer
-		json.Indent(&out, data, "", "\t")
+		_ = json.Indent(&out, data, "", "\t")
 
 		fmt.Println(string(out.Bytes()))
 	default:
@@ -211,7 +211,7 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 	return
 }
 
-func generateTlsConfig(certFile string, keyFile string) *tls.Config {
+func generateTLSConfig(certFile string, keyFile string) *tls.Config {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Error reading certificate files: %v", err)

@@ -12,22 +12,36 @@ go get github.com/krylovsk/mqtt-benchmark
 The tool supports multiple concurrent clients, configurable message size, etc:
 
 ```sh
-> mqtt-benchmark --help
-Usage of mqtt-benchmark:
-  -broker="tcp://localhost:1883": MQTT broker endpoint as scheme://host:port
-  -cert="cert.pem": File path to your client certificate in PEM format
-  -client-id="mqtt-benchmark": MQTT client id
-  -clients=10: Number of clients to start
-  -count=100: Number of messages to send per client
-  -format="text": Output format: text|json
-  -key="key.pem": File path to your private key in PEM format
-  -password="": MQTT password (empty if auth disabled)
-  -qos=1: QoS for published messages
-  -quiet=false : Suppress logs while running (except errors and the result)
-  -size=100: Size of the messages payload (bytes)
-  -topic="/test": MQTT topic for incoming message
-  -username="": MQTT username (empty if auth disabled)
-  -wait="60000": QoS 1 wait timeout in milliseconds (default 60000)
+$ ./mqtt-benchmark -h
+Usage of ./mqtt-benchmark:
+  -broker string
+    	MQTT broker endpoint as scheme://host:port (default "tcp://localhost:1883")
+  -client-cert string
+    	Path to client certificate in PEM format
+  -client-key string
+    	Path to private clientKey in PEM format
+  -client-prefix string
+    	MQTT client id prefix (suffixed with '-<client-num>' (default "mqtt-benchmark")
+  -clients int
+    	Number of clients to start (default 10)
+  -count int
+    	Number of messages to send per client (default 100)
+  -format string
+    	Output format: text|json (default "text")
+  -password string
+    	MQTT client password (empty if auth disabled)
+  -qos int
+    	QoS for published messages (default 1)
+  -quiet
+    	Suppress logs while running
+  -size int
+    	Size of the messages payload (bytes) (default 100)
+  -topic string
+    	MQTT topic for outgoing messages (default "/test")
+  -username string
+    	MQTT client username (empty if auth disabled)
+  -wait int
+    	QoS 1 wait timeout in milliseconds (default 60000)
 ```
 
 > NOTE: if `count=1` or `clients=1`, the sample standard deviation will be returned as `0` (convention due to the [lack of NaN support in JSON](https://tools.ietf.org/html/rfc4627#section-2.4))
