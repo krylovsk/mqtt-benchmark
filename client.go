@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"time"
@@ -10,19 +11,24 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// Client implements an MQTT client running benchmark test
 type Client struct {
-	ID         int
-	BrokerURL  string
-	BrokerUser string
-	BrokerPass string
-	MsgTopic   string
-	MsgPayload string
-	MsgSize    int
-	MsgCount   int
-	MsgQoS     byte
-	Quiet      bool
+	ID          int
+	ClientID    string
+	BrokerURL   string
+	BrokerUser  string
+	BrokerPass  string
+	MsgTopic    string
+  MsgPayload string
+	MsgSize     int
+	MsgCount    int
+	MsgQoS      byte
+	Quiet       bool
+	WaitTimeout time.Duration
+	TLSConfig   *tls.Config
 }
 
+// Run runs benchmark tests and writes results in the provided channel
 func (c *Client) Run(res chan *RunResults) {
 	newMsgs := make(chan *Message)
 	pubMsgs := make(chan *Message)
@@ -70,25 +76,19 @@ func (c *Client) Run(res chan *RunResults) {
 }
 
 func (c *Client) genMessages(ch chan *Message, done chan bool) {
-	if c.MsgPayload != "" {
+	var payload interface{}
+  // set payload if specified
+  if c.MsgPayload != "" {
+    payload = c.MsgPayload
+  } else {
+    payload = make([]byte, c.MsgSize)
+  }
 
-		for i := 0; i < c.MsgCount; i++ {
-			ch <- &Message{
-				Topic:   c.MsgTopic,
-				QoS:     c.MsgQoS,
-				Payload: c.MsgPayload,
-			}
-		}
-	} else {
-
-		for i := 0; i < c.MsgCount; i++ {
-			ch <- &Message{
-				Topic:   c.MsgTopic,
-				QoS:     c.MsgQoS,
-				Payload: make([]byte, c.MsgSize),
-			}
-		}
-	}
+  ch <- &Message{
+    Topic:   c.MsgTopic,
+    QoS:     c.MsgQoS,
+    Payload: payload,
+  }
 
 	done <- true
 	// log.Printf("CLIENT %v is done generating messages\n", c.ID)
@@ -106,8 +106,11 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 			case m := <-in:
 				m.Sent = time.Now()
 				token := client.Publish(m.Topic, m.QoS, false, m.Payload)
-				token.Wait()
-				if token.Error() != nil {
+				res := token.WaitTimeout(c.WaitTimeout)
+				if !res {
+					log.Printf("CLIENT %v Timeout sending message: %v\n", c.ID, token.Error())
+					m.Error = true
+				} else if token.Error() != nil {
 					log.Printf("CLIENT %v Error sending message: %v\n", c.ID, token.Error())
 					m.Error = true
 				} else {
@@ -134,7 +137,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 
 	opts := mqtt.NewClientOptions().
 		AddBroker(c.BrokerURL).
-		SetClientID(fmt.Sprintf("mqtt-benchmark-%v-%v", time.Now().Format(time.RFC3339Nano), c.ID)).
+		SetClientID(fmt.Sprintf("%s-%v", c.ClientID, c.ID)).
 		SetCleanSession(true).
 		SetAutoReconnect(true).
 		SetOnConnectHandler(onConnected).
@@ -145,6 +148,10 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 		opts.SetUsername(c.BrokerUser)
 		opts.SetPassword(c.BrokerPass)
 	}
+	if c.TLSConfig != nil {
+		opts.SetTLSConfig(c.TLSConfig)
+	}
+
 	client := mqtt.NewClient(opts)
 	token := client.Connect()
 	token.Wait()

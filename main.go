@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -56,19 +57,22 @@ type JSONResults struct {
 }
 
 func main() {
-
 	var (
-		broker   = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
-		topic    = flag.String("topic", "/test", "MQTT topic for outgoing messages")
-		payload  = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
-		username = flag.String("username", "", "MQTT username (empty if auth disabled)")
-		password = flag.String("password", "", "MQTT password (empty if auth disabled)")
-		qos      = flag.Int("qos", 1, "QoS for published messages")
-		size     = flag.Int("size", 100, "Size of the messages payload (bytes)")
-		count    = flag.Int("count", 100, "Number of messages to send per client")
-		clients  = flag.Int("clients", 10, "Number of clients to start")
-		format   = flag.String("format", "text", "Output format: text|json")
-		quiet    = flag.Bool("quiet", false, "Suppress logs while running")
+		broker       = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
+		topic        = flag.String("topic", "/test", "MQTT topic for outgoing messages")
+    payload      = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
+		username     = flag.String("username", "", "MQTT client username (empty if auth disabled)")
+		password     = flag.String("password", "", "MQTT client password (empty if auth disabled)")
+		qos          = flag.Int("qos", 1, "QoS for published messages")
+		wait         = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
+		size         = flag.Int("size", 100, "Size of the messages payload (bytes)")
+		count        = flag.Int("count", 100, "Number of messages to send per client")
+		clients      = flag.Int("clients", 10, "Number of clients to start")
+		format       = flag.String("format", "text", "Output format: text|json")
+		quiet        = flag.Bool("quiet", false, "Suppress logs while running")
+		clientPrefix = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
+		clientCert   = flag.String("client-cert", "", "Path to client certificate in PEM format")
+		clientKey    = flag.String("client-key", "", "Path to private clientKey in PEM format")
 	)
 
 	flag.Parse()
@@ -80,6 +84,19 @@ func main() {
 		log.Fatalf("Invalid arguments: messages count should be > 1, given: %v", *count)
 	}
 
+	if *clientCert != "" && *clientKey == "" {
+		log.Fatal("Invalid arguments: private clientKey path missing")
+	}
+
+	if *clientCert == "" && *clientKey != "" {
+		log.Fatalf("Invalid arguments: certificate path missing")
+	}
+
+	var tlsConfig *tls.Config
+	if *clientCert != "" && *clientKey != "" {
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey)
+	}
+
 	resCh := make(chan *RunResults)
 	start := time.Now()
 	for i := 0; i < *clients; i++ {
@@ -87,16 +104,19 @@ func main() {
 			log.Println("Starting client ", i)
 		}
 		c := &Client{
-			ID:         i,
-			BrokerURL:  *broker,
-			BrokerUser: *username,
-			BrokerPass: *password,
-			MsgTopic:   *topic,
-			MsgPayload: *payload,
-			MsgSize:    *size,
-			MsgCount:   *count,
-			MsgQoS:     byte(*qos),
-			Quiet:      *quiet,
+			ID:          i,
+			ClientID:    *clientPrefix,
+			BrokerURL:   *broker,
+			BrokerUser:  *username,
+			BrokerPass:  *password,
+			MsgTopic:    *topic,
+      MsgPayload:  *payload,
+			MsgSize:     *size,
+			MsgCount:    *count,
+			MsgQoS:      byte(*qos),
+			Quiet:       *quiet,
+			WaitTimeout: time.Duration(*wait) * time.Millisecond,
+			TLSConfig:   tlsConfig,
 		}
 		go c.Run(resCh)
 	}
@@ -165,7 +185,7 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 			log.Fatalf("Error marshalling results: %v", err)
 		}
 		var out bytes.Buffer
-		json.Indent(&out, data, "", "\t")
+		_ = json.Indent(&out, data, "", "\t")
 
 		fmt.Println(string(out.Bytes()))
 	default:
@@ -191,4 +211,20 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 		fmt.Printf("Total Bandwidth (msg/sec):   %.3f\n", totals.TotalMsgsPerSec)
 	}
 	return
+}
+
+func generateTLSConfig(certFile string, keyFile string) *tls.Config {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		log.Fatalf("Error reading certificate files: %v", err)
+	}
+
+	cfg := tls.Config{
+		ClientAuth:         tls.NoClientCert,
+		ClientCAs:          nil,
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{cert},
+	}
+
+	return &cfg
 }

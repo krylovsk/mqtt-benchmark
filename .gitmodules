@@ -1,6 +1,0 @@
-[submodule "vendor/github.com/GaryBoone/GoStats"]
-	path = vendor/github.com/GaryBoone/GoStats
-	url = git://github.com/GaryBoone/GoStats
-[submodule "vendor/github.com/eclipse/paho.mqtt.golang"]
-	path = vendor/github.com/eclipse/paho.mqtt.golang
-	url = git://github.com/eclipse/paho.mqtt.golang
