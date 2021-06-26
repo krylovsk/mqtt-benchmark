@@ -60,6 +60,7 @@ func main() {
 	var (
 		broker       = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
 		topic        = flag.String("topic", "/test", "MQTT topic for outgoing messages")
+    payload      = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
 		username     = flag.String("username", "", "MQTT client username (empty if auth disabled)")
 		password     = flag.String("password", "", "MQTT client password (empty if auth disabled)")
 		qos          = flag.Int("qos", 1, "QoS for published messages")
@@ -109,6 +110,7 @@ func main() {
 			BrokerUser:  *username,
 			BrokerPass:  *password,
 			MsgTopic:    *topic,
+      MsgPayload:  *payload,
 			MsgSize:     *size,
 			MsgCount:    *count,
 			MsgQoS:      byte(*qos),
