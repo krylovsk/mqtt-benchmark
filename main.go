@@ -60,7 +60,7 @@ func main() {
 	var (
 		broker       = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
 		topic        = flag.String("topic", "/test", "MQTT topic for outgoing messages")
-    payload      = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
+		payload      = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
 		username     = flag.String("username", "", "MQTT client username (empty if auth disabled)")
 		password     = flag.String("password", "", "MQTT client password (empty if auth disabled)")
 		qos          = flag.Int("qos", 1, "QoS for published messages")
@@ -110,7 +110,7 @@ func main() {
 			BrokerUser:  *username,
 			BrokerPass:  *password,
 			MsgTopic:    *topic,
-      MsgPayload:  *payload,
+			MsgPayload:  *payload,
 			MsgSize:     *size,
 			MsgCount:    *count,
 			MsgQoS:      byte(*qos),
@@ -126,7 +126,7 @@ func main() {
 	for i := 0; i < *clients; i++ {
 		results[i] = <-resCh
 	}
-	totalTime := time.Now().Sub(start)
+	totalTime := time.Since(start)
 	totals := calculateTotalResults(results, totalTime, *clients)
 
 	// print stats
@@ -187,7 +187,7 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 		var out bytes.Buffer
 		_ = json.Indent(&out, data, "", "\t")
 
-		fmt.Println(string(out.Bytes()))
+		fmt.Println(out.String())
 	default:
 		for _, res := range results {
 			fmt.Printf("======= CLIENT %d =======\n", res.ID)
@@ -210,7 +210,6 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 		fmt.Printf("Average Bandwidth (msg/sec): %.3f\n", totals.AvgMsgsPerSec)
 		fmt.Printf("Total Bandwidth (msg/sec):   %.3f\n", totals.TotalMsgsPerSec)
 	}
-	return
 }
 
 func generateTLSConfig(certFile string, keyFile string) *tls.Config {
