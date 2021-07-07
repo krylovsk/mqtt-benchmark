@@ -77,17 +77,19 @@ func (c *Client) Run(res chan *RunResults) {
 
 func (c *Client) genMessages(ch chan *Message, done chan bool) {
 	var payload interface{}
-	// set payload if specified
-	if c.MsgPayload != "" {
-		payload = c.MsgPayload
-	} else {
-		payload = make([]byte, c.MsgSize)
-	}
+	for i := 0; i < c.MsgCount; i++ {
+		// set payload if specified
+		if c.MsgPayload != "" {
+			payload = c.MsgPayload
+		} else {
+			payload = make([]byte, c.MsgSize)
+		}
 
-	ch <- &Message{
-		Topic:   c.MsgTopic,
-		QoS:     c.MsgQoS,
-		Payload: payload,
+		ch <- &Message{
+			Topic:   c.MsgTopic,
+			QoS:     c.MsgQoS,
+			Payload: payload,
+		}
 	}
 
 	done <- true
