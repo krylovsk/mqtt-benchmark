@@ -84,10 +84,12 @@ func (c *Client) genMessages(ch chan *Message, done chan bool) {
 		payload = make([]byte, c.MsgSize)
 	}
 
-	ch <- &Message{
-		Topic:   c.MsgTopic,
-		QoS:     c.MsgQoS,
-		Payload: payload,
+	for i := 0; i < c.MsgCount; i++ {
+		ch <- &Message{
+			Topic:   c.MsgTopic,
+			QoS:     c.MsgQoS,
+			Payload: payload,
+		}
 	}
 
 	done <- true
