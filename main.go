@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -73,6 +75,7 @@ func main() {
 		clientPrefix = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
 		clientCert   = flag.String("client-cert", "", "Path to client certificate in PEM format")
 		clientKey    = flag.String("client-key", "", "Path to private clientKey in PEM format")
+		clientCaCert = flag.String("client-cacert", "", "Path to client CA certificate in PEM format")
 	)
 
 	flag.Parse()
@@ -92,9 +95,17 @@ func main() {
 		log.Fatalf("Invalid arguments: certificate path missing")
 	}
 
+	if *clientCaCert != "" && *clientCert == "" {
+		log.Fatalf("Invalid arguments: certificate path missing")
+	}
+
+	if *clientCaCert != "" && *clientKey == "" {
+		log.Fatalf("Invalid arguments: private clientKey path missing")
+	}
+
 	var tlsConfig *tls.Config
 	if *clientCert != "" && *clientKey != "" {
-		tlsConfig = generateTLSConfig(*clientCert, *clientKey)
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *clientCaCert)
 	}
 
 	resCh := make(chan *RunResults)
@@ -212,17 +223,25 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 	}
 }
 
-func generateTLSConfig(certFile string, keyFile string) *tls.Config {
+func generateTLSConfig(certFile string, keyFile string, caFile string) *tls.Config {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Error reading certificate files: %v", err)
 	}
+
+	caCert, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		log.Fatalf("Error reading CA certificate file: %v", err)
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
 
 	cfg := tls.Config{
 		ClientAuth:         tls.NoClientCert,
 		ClientCAs:          nil,
 		InsecureSkipVerify: true,
 		Certificates:       []tls.Certificate{cert},
+		RootCAs:            caCertPool,
 	}
 
 	return &cfg
