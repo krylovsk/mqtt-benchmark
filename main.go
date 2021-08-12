@@ -229,12 +229,15 @@ func generateTLSConfig(certFile string, keyFile string, caFile string) *tls.Conf
 		log.Fatalf("Error reading certificate files: %v", err)
 	}
 
-	caCert, err := ioutil.ReadFile(caFile)
-	if err != nil {
-		log.Fatalf("Error reading CA certificate file: %v", err)
+	var caCertPool *x509.CertPool = nil
+	if caFile != "" {
+		caCert, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			log.Fatalf("Error reading CA certificate file: %v", err)
+		}
+		caCertPool = x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
 	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
 
 	cfg := tls.Config{
 		ClientAuth:         tls.NoClientCert,
