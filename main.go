@@ -96,14 +96,6 @@ func main() {
 		log.Fatalf("Invalid arguments: certificate path missing")
 	}
 
-	if *brokerCaCert != "" && *clientCert == "" {
-		log.Fatalf("Invalid arguments: certificate path missing")
-	}
-
-	if *brokerCaCert != "" && *clientKey == "" {
-		log.Fatalf("Invalid arguments: private clientKey path missing")
-	}
-
 	var tlsConfig *tls.Config
 	if *clientCert != "" && *clientKey != "" {
 		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert, *insecure)
