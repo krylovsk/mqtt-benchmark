@@ -75,7 +75,7 @@ func main() {
 		clientPrefix = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
 		clientCert   = flag.String("client-cert", "", "Path to client certificate in PEM format")
 		clientKey    = flag.String("client-key", "", "Path to private clientKey in PEM format")
-		clientCaCert = flag.String("client-cacert", "", "Path to client CA certificate in PEM format")
+		brokerCaCert = flag.String("broker-cacert", "", "Path to broker CA certificate in PEM format")
 	)
 
 	flag.Parse()
@@ -95,17 +95,17 @@ func main() {
 		log.Fatalf("Invalid arguments: certificate path missing")
 	}
 
-	if *clientCaCert != "" && *clientCert == "" {
+	if *brokerCaCert != "" && *clientCert == "" {
 		log.Fatalf("Invalid arguments: certificate path missing")
 	}
 
-	if *clientCaCert != "" && *clientKey == "" {
+	if *brokerCaCert != "" && *clientKey == "" {
 		log.Fatalf("Invalid arguments: private clientKey path missing")
 	}
 
 	var tlsConfig *tls.Config
 	if *clientCert != "" && *clientKey != "" {
-		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *clientCaCert)
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert)
 	}
 
 	resCh := make(chan *RunResults)
