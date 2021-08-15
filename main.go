@@ -76,6 +76,7 @@ func main() {
 		clientCert   = flag.String("client-cert", "", "Path to client certificate in PEM format")
 		clientKey    = flag.String("client-key", "", "Path to private clientKey in PEM format")
 		brokerCaCert = flag.String("broker-cacert", "", "Path to broker CA certificate in PEM format")
+		insecure     = flag.Bool("insecure", false, "Skip TLS certificate verification")
 	)
 
 	flag.Parse()
@@ -105,7 +106,7 @@ func main() {
 
 	var tlsConfig *tls.Config
 	if *clientCert != "" && *clientKey != "" {
-		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert)
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert, *insecure)
 	}
 
 	resCh := make(chan *RunResults)
@@ -223,7 +224,7 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 	}
 }
 
-func generateTLSConfig(certFile string, keyFile string, caFile string) *tls.Config {
+func generateTLSConfig(certFile string, keyFile string, caFile string, insecure bool) *tls.Config {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Error reading certificate files: %v", err)
@@ -242,7 +243,7 @@ func generateTLSConfig(certFile string, keyFile string, caFile string) *tls.Conf
 	cfg := tls.Config{
 		ClientAuth:         tls.NoClientCert,
 		ClientCAs:          nil,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: insecure,
 		Certificates:       []tls.Certificate{cert},
 		RootCAs:            caCertPool,
 	}
