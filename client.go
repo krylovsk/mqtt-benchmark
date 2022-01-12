@@ -150,7 +150,7 @@ func (c *Client) pubMessages(in, out chan *Message, doneGen, donePub chan bool) 
 					m.Error = false
 				}
 				out <- m
-				time.Sleep(time.Duration(c.Delay) * time.Second)	
+				time.Sleep(time.Duration(c.Delay) * time.Millisecond)	
 				if ctr > 0 && ctr%100 == 0 {
 					if !c.Quiet {
 						log.Printf("CLIENT %v published %v messages and keeps publishing...\n", c.ID, ctr)

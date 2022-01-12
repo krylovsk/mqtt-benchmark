@@ -91,7 +91,7 @@ func main() {
 
 	for i := 0; i < *clients; i++ {
 		if !*quiet {
-			log.Println("Starting client ", i)
+			log.Println("Starting cliente ", i)
 		}
 		c := &Client{
 			ID:         i,
