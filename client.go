@@ -26,6 +26,7 @@ type Client struct {
 	Quiet       bool
 	WaitTimeout time.Duration
 	TLSConfig   *tls.Config
+	MessageInterval int
 }
 
 // Run runs benchmark tests and writes results in the provided channel
@@ -90,6 +91,7 @@ func (c *Client) genMessages(ch chan *Message, done chan bool) {
 			QoS:     c.MsgQoS,
 			Payload: payload,
 		}
+		time.Sleep(time.Duration(c.MessageInterval) * time.Second)
 	}
 
 	done <- true
