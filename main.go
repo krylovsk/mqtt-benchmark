@@ -123,7 +123,7 @@ func main() {
 			MessageInterval: *messageIntervalInSec,
 		}
 		go c.Run(resCh)
-        time.Sleep(time.Duration(sleepTime * 1000) * time.milliseconds)
+        time.Sleep(time.Duration(sleepTime * 1000) * time.Millisecond)
 	}
 
 	// collect the results
