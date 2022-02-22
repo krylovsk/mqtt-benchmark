@@ -73,7 +73,7 @@ func main() {
 		clientPrefix        = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
 		clientCert          = flag.String("client-cert", "", "Path to client certificate in PEM format")
 		clientKey           = flag.String("client-key", "", "Path to private clientKey in PEM format")
-		rampUpTimeInSec     = flag.Int("rampUp", 0, "Time in seconds to generate clients by default will not wait between load request")
+		rampUpTimeInSec     = flag.Int("ramp-up-time", 0, "Time in seconds to generate clients by default will not wait between load request")
 		messageIntervalInSec = flag.Int("message-interval", 1, "Time interval in seconds to publish message")
 	)
 
