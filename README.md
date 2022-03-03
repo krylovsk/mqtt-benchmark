@@ -46,6 +46,8 @@ Usage of ./mqtt-benchmark:
     	QoS 1 wait timeout in milliseconds (default 60000)
   -ramp-up-time int
         Time in seconds to generate clients, (default 0) i.e by default will not wait between load request
+  -message-interval
+        Time interval in seconds to publish message (default 1)
 ```
 
 > NOTE: if `count=1` or `clients=1`, the sample standard deviation will be returned as `0` (convention due to the [lack of NaN support in JSON](https://tools.ietf.org/html/rfc4627#section-2.4))
