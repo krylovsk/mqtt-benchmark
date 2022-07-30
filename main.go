@@ -60,23 +60,25 @@ type JSONResults struct {
 
 func main() {
 	var (
-		broker       = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
-		topic        = flag.String("topic", "/test", "MQTT topic for outgoing messages")
-		payload      = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
-		username     = flag.String("username", "", "MQTT client username (empty if auth disabled)")
-		password     = flag.String("password", "", "MQTT client password (empty if auth disabled)")
-		qos          = flag.Int("qos", 1, "QoS for published messages")
-		wait         = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
-		size         = flag.Int("size", 100, "Size of the messages payload (bytes)")
-		count        = flag.Int("count", 100, "Number of messages to send per client")
-		clients      = flag.Int("clients", 10, "Number of clients to start")
-		format       = flag.String("format", "text", "Output format: text|json")
-		quiet        = flag.Bool("quiet", false, "Suppress logs while running")
-		clientPrefix = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
-		clientCert   = flag.String("client-cert", "", "Path to client certificate in PEM format")
-		clientKey    = flag.String("client-key", "", "Path to private clientKey in PEM format")
-		brokerCaCert = flag.String("broker-cacert", "", "Path to broker CA certificate in PEM format")
-		insecure     = flag.Bool("insecure", false, "Skip TLS certificate verification")
+		broker               = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
+		topic                = flag.String("topic", "/test", "MQTT topic for outgoing messages")
+		payload              = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
+		username             = flag.String("username", "", "MQTT client username (empty if auth disabled)")
+		password             = flag.String("password", "", "MQTT client password (empty if auth disabled)")
+		qos                  = flag.Int("qos", 1, "QoS for published messages")
+		wait                 = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
+		size                 = flag.Int("size", 100, "Size of the messages payload (bytes)")
+		count                = flag.Int("count", 100, "Number of messages to send per client")
+		clients              = flag.Int("clients", 10, "Number of clients to start")
+		format               = flag.String("format", "text", "Output format: text|json")
+		quiet                = flag.Bool("quiet", false, "Suppress logs while running")
+		clientPrefix         = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
+		clientCert           = flag.String("client-cert", "", "Path to client certificate in PEM format")
+		clientKey            = flag.String("client-key", "", "Path to private clientKey in PEM format")
+    brokerCaCert         = flag.String("broker-cacert", "", "Path to broker CA certificate in PEM format")
+		insecure             = flag.Bool("insecure", false, "Skip TLS certificate verification")
+		rampUpTimeInSec      = flag.Int("ramp-up-time", 0, "Time in seconds to generate clients by default will not wait between load request")
+		messageIntervalInSec = flag.Int("message-interval", 1, "Time interval in seconds to publish message")
 	)
 
 	flag.Parse()
@@ -103,6 +105,7 @@ func main() {
 
 	resCh := make(chan *RunResults)
 	start := time.Now()
+	sleepTime := float64(*rampUpTimeInSec) / float64(*clients)
 	for i := 0; i < *clients; i++ {
 		if !*quiet {
 			log.Println("Starting client ", i)
@@ -121,8 +124,10 @@ func main() {
 			Quiet:       *quiet,
 			WaitTimeout: time.Duration(*wait) * time.Millisecond,
 			TLSConfig:   tlsConfig,
+			MessageInterval: *messageIntervalInSec,
 		}
 		go c.Run(resCh)
+        time.Sleep(time.Duration(sleepTime * 1000) * time.Millisecond)
 	}
 
 	// collect the results
