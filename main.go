@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -58,22 +60,24 @@ type JSONResults struct {
 
 func main() {
 	var (
-		broker              = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
-		topic               = flag.String("topic", "/test", "MQTT topic for outgoing messages")
-		payload             = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
-		username            = flag.String("username", "", "MQTT client username (empty if auth disabled)")
-		password            = flag.String("password", "", "MQTT client password (empty if auth disabled)")
-		qos                 = flag.Int("qos", 1, "QoS for published messages")
-		wait                = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
-		size                = flag.Int("size", 100, "Size of the messages payload (bytes)")
-		count               = flag.Int("count", 100, "Number of messages to send per client")
-		clients             = flag.Int("clients", 10, "Number of clients to start")
-		format              = flag.String("format", "text", "Output format: text|json")
-		quiet               = flag.Bool("quiet", false, "Suppress logs while running")
-		clientPrefix        = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
-		clientCert          = flag.String("client-cert", "", "Path to client certificate in PEM format")
-		clientKey           = flag.String("client-key", "", "Path to private clientKey in PEM format")
-		rampUpTimeInSec     = flag.Int("ramp-up-time", 0, "Time in seconds to generate clients by default will not wait between load request")
+		broker               = flag.String("broker", "tcp://localhost:1883", "MQTT broker endpoint as scheme://host:port")
+		topic                = flag.String("topic", "/test", "MQTT topic for outgoing messages")
+		payload              = flag.String("payload", "", "MQTT message payload. If empty, then payload is generated based on the size parameter")
+		username             = flag.String("username", "", "MQTT client username (empty if auth disabled)")
+		password             = flag.String("password", "", "MQTT client password (empty if auth disabled)")
+		qos                  = flag.Int("qos", 1, "QoS for published messages")
+		wait                 = flag.Int("wait", 60000, "QoS 1 wait timeout in milliseconds")
+		size                 = flag.Int("size", 100, "Size of the messages payload (bytes)")
+		count                = flag.Int("count", 100, "Number of messages to send per client")
+		clients              = flag.Int("clients", 10, "Number of clients to start")
+		format               = flag.String("format", "text", "Output format: text|json")
+		quiet                = flag.Bool("quiet", false, "Suppress logs while running")
+		clientPrefix         = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
+		clientCert           = flag.String("client-cert", "", "Path to client certificate in PEM format")
+		clientKey            = flag.String("client-key", "", "Path to private clientKey in PEM format")
+    brokerCaCert         = flag.String("broker-cacert", "", "Path to broker CA certificate in PEM format")
+		insecure             = flag.Bool("insecure", false, "Skip TLS certificate verification")
+		rampUpTimeInSec      = flag.Int("ramp-up-time", 0, "Time in seconds to generate clients by default will not wait between load request")
 		messageIntervalInSec = flag.Int("message-interval", 1, "Time interval in seconds to publish message")
 	)
 
@@ -96,7 +100,7 @@ func main() {
 
 	var tlsConfig *tls.Config
 	if *clientCert != "" && *clientKey != "" {
-		tlsConfig = generateTLSConfig(*clientCert, *clientKey)
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert, *insecure)
 	}
 
 	resCh := make(chan *RunResults)
@@ -217,17 +221,28 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 	}
 }
 
-func generateTLSConfig(certFile string, keyFile string) *tls.Config {
+func generateTLSConfig(certFile string, keyFile string, caFile string, insecure bool) *tls.Config {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		log.Fatalf("Error reading certificate files: %v", err)
 	}
 
+	var caCertPool *x509.CertPool = nil
+	if caFile != "" {
+		caCert, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			log.Fatalf("Error reading CA certificate file: %v", err)
+		}
+		caCertPool = x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+	}
+
 	cfg := tls.Config{
 		ClientAuth:         tls.NoClientCert,
 		ClientCAs:          nil,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: insecure,
 		Certificates:       []tls.Certificate{cert},
+		RootCAs:            caCertPool,
 	}
 
 	return &cfg

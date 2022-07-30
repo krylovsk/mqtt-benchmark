@@ -16,6 +16,8 @@ $ ./mqtt-benchmark -h
 Usage of ./mqtt-benchmark:
   -broker string
     	MQTT broker endpoint as scheme://host:port (default "tcp://localhost:1883")
+  -broker-cacert string
+    	Path to broker CA certificate in PEM format
   -client-cert string
     	Path to client certificate in PEM format
   -client-key string
@@ -28,6 +30,8 @@ Usage of ./mqtt-benchmark:
     	Number of messages to send per client (default 100)
   -format string
     	Output format: text|json (default "text")
+  -insecure
+    	Skip TLS certificate verification
   -password string
     	MQTT client password (empty if auth disabled)
   -payload string
