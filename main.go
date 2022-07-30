@@ -75,7 +75,7 @@ func main() {
 		clientPrefix         = flag.String("client-prefix", "mqtt-benchmark", "MQTT client id prefix (suffixed with '-<client-num>'")
 		clientCert           = flag.String("client-cert", "", "Path to client certificate in PEM format")
 		clientKey            = flag.String("client-key", "", "Path to private clientKey in PEM format")
-    brokerCaCert         = flag.String("broker-cacert", "", "Path to broker CA certificate in PEM format")
+		brokerCaCert         = flag.String("broker-ca-cert", "", "Path to broker CA certificate in PEM format")
 		insecure             = flag.Bool("insecure", false, "Skip TLS certificate verification")
 		rampUpTimeInSec      = flag.Int("ramp-up-time", 0, "Time in seconds to generate clients by default will not wait between load request")
 		messageIntervalInSec = flag.Int("message-interval", 1, "Time interval in seconds to publish message")
@@ -111,23 +111,23 @@ func main() {
 			log.Println("Starting client ", i)
 		}
 		c := &Client{
-			ID:          i,
-			ClientID:    *clientPrefix,
-			BrokerURL:   *broker,
-			BrokerUser:  *username,
-			BrokerPass:  *password,
-			MsgTopic:    *topic,
-			MsgPayload:  *payload,
-			MsgSize:     *size,
-			MsgCount:    *count,
-			MsgQoS:      byte(*qos),
-			Quiet:       *quiet,
-			WaitTimeout: time.Duration(*wait) * time.Millisecond,
-			TLSConfig:   tlsConfig,
+			ID:              i,
+			ClientID:        *clientPrefix,
+			BrokerURL:       *broker,
+			BrokerUser:      *username,
+			BrokerPass:      *password,
+			MsgTopic:        *topic,
+			MsgPayload:      *payload,
+			MsgSize:         *size,
+			MsgCount:        *count,
+			MsgQoS:          byte(*qos),
+			Quiet:           *quiet,
+			WaitTimeout:     time.Duration(*wait) * time.Millisecond,
+			TLSConfig:       tlsConfig,
 			MessageInterval: *messageIntervalInSec,
 		}
 		go c.Run(resCh)
-        time.Sleep(time.Duration(sleepTime * 1000) * time.Millisecond)
+		time.Sleep(time.Duration(sleepTime*1000) * time.Millisecond)
 	}
 
 	// collect the results
@@ -233,8 +233,12 @@ func generateTLSConfig(certFile string, keyFile string, caFile string, insecure 
 		if err != nil {
 			log.Fatalf("Error reading CA certificate file: %v", err)
 		}
+
 		caCertPool = x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
+		ok := caCertPool.AppendCertsFromPEM(caCert)
+		if !ok {
+			log.Fatalf("Error parsing CA certificate %v", certFile)
+		}
 	}
 
 	cfg := tls.Config{

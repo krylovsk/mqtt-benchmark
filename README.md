@@ -16,7 +16,7 @@ $ ./mqtt-benchmark -h
 Usage of ./mqtt-benchmark:
   -broker string
     	MQTT broker endpoint as scheme://host:port (default "tcp://localhost:1883")
-  -broker-cacert string
+  -broker-ca-cert string
     	Path to broker CA certificate in PEM format
   -client-cert string
     	Path to client certificate in PEM format
@@ -32,6 +32,8 @@ Usage of ./mqtt-benchmark:
     	Output format: text|json (default "text")
   -insecure
     	Skip TLS certificate verification
+  -message-interval int
+    	Time interval in seconds to publish message (default 1)
   -password string
     	MQTT client password (empty if auth disabled)
   -payload string
@@ -40,6 +42,8 @@ Usage of ./mqtt-benchmark:
     	QoS for published messages (default 1)
   -quiet
     	Suppress logs while running
+  -ramp-up-time int
+    	Time in seconds to generate clients by default will not wait between load request
   -size int
     	Size of the messages payload (bytes) (default 100)
   -topic string
@@ -48,10 +52,6 @@ Usage of ./mqtt-benchmark:
     	MQTT client username (empty if auth disabled)
   -wait int
     	QoS 1 wait timeout in milliseconds (default 60000)
-  -ramp-up-time int
-        Time in seconds to generate clients, (default 0) i.e by default will not wait between load request
-  -message-interval
-        Time interval in seconds to publish message (default 1)
 ```
 
 > NOTE: if `count=1` or `clients=1`, the sample standard deviation will be returned as `0` (convention due to the [lack of NaN support in JSON](https://tools.ietf.org/html/rfc4627#section-2.4))
