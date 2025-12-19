@@ -1,5 +1,7 @@
 # CHANGELOG
 
+* TLS connection only with BrokerCACert (#30)
+
 ## v0.2.0
 
 * Custom payload (#12)
