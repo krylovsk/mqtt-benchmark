@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"net/url"
 	"time"
+
+	"os"
 
 	"github.com/GaryBoone/GoStats/stats"
 )
@@ -99,8 +101,14 @@ func main() {
 	}
 
 	var tlsConfig *tls.Config
-	if *clientCert != "" && *clientKey != "" {
-		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert, *insecure)
+	// Create TLS config if either client cert+key are provided or a broker CA cert is provided
+	if (*clientCert != "" && *clientKey != "") || *brokerCaCert != "" {
+		u, err := url.Parse(*broker)
+		if err != nil {
+			log.Fatalf("Invalid broker URL: %v", err)
+		}
+		host := u.Hostname()
+		tlsConfig = generateTLSConfig(*clientCert, *clientKey, *brokerCaCert, *insecure, host)
 	}
 
 	resCh := make(chan *RunResults)
@@ -221,15 +229,20 @@ func printResults(results []*RunResults, totals *TotalResults, format string) {
 	}
 }
 
-func generateTLSConfig(certFile string, keyFile string, caFile string, insecure bool) *tls.Config {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		log.Fatalf("Error reading certificate files: %v", err)
+func generateTLSConfig(certFile string, keyFile string, caFile string, insecure bool, serverName string) *tls.Config {
+	var certs []tls.Certificate
+	// Load client certificate if provided
+	if certFile != "" && keyFile != "" {
+		c, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			log.Fatalf("Error reading certificate files: %v", err)
+		}
+		certs = append(certs, c)
 	}
 
 	var caCertPool *x509.CertPool = nil
 	if caFile != "" {
-		caCert, err := ioutil.ReadFile(caFile)
+		caCert, err := os.ReadFile(caFile)
 		if err != nil {
 			log.Fatalf("Error reading CA certificate file: %v", err)
 		}
@@ -237,16 +250,19 @@ func generateTLSConfig(certFile string, keyFile string, caFile string, insecure 
 		caCertPool = x509.NewCertPool()
 		ok := caCertPool.AppendCertsFromPEM(caCert)
 		if !ok {
-			log.Fatalf("Error parsing CA certificate %v", certFile)
+			log.Fatalf("Error parsing CA certificate %v", caFile)
 		}
 	}
 
 	cfg := tls.Config{
-		ClientAuth:         tls.NoClientCert,
-		ClientCAs:          nil,
 		InsecureSkipVerify: insecure,
-		Certificates:       []tls.Certificate{cert},
+		Certificates:       certs,
 		RootCAs:            caCertPool,
+	}
+
+	// set server name for hostname verification / SNI if provided
+	if serverName != "" {
+		cfg.ServerName = serverName
 	}
 
 	return &cfg
